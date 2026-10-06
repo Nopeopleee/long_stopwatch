@@ -22,5 +22,40 @@ function cancelHoldReset(){clearInterval(holdTimer);holdTimer=null;els.holdProgr
 els.startBtn.addEventListener("click",()=>openTimeDialog(true));els.editBtn.addEventListener("click",()=>openTimeDialog(false));els.timeForm.addEventListener("submit",e=>e.preventDefault());els.saveTimeBtn.addEventListener("click",e=>{e.preventDefault();if(saveTimeFromDialog())els.timeDialog.close()});els.exportBtn.addEventListener("click",exportBackup);els.importBtn.addEventListener("click",()=>els.importFile.click());els.importFile.addEventListener("change",()=>{const file=els.importFile.files?.[0];if(file)importBackup(file)});
 els.resetBtn.addEventListener("pointerdown",e=>{e.preventDefault();startHoldReset()});["pointerup","pointerleave","pointercancel"].forEach(evt=>els.resetBtn.addEventListener(evt,cancelHoldReset));
 window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();deferredInstallPrompt=event;els.installBtn.hidden=false});els.installBtn.addEventListener("click",async()=>{if(!deferredInstallPrompt)return;deferredInstallPrompt.prompt();await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;els.installBtn.hidden=true});window.addEventListener("appinstalled",()=>{els.installBtn.hidden=true;deferredInstallPrompt=null});
-if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(console.error));
-render();setInterval(render,1000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)render()});
+
+// PWA auto-update: check the deployed service worker whenever the app opens or
+// returns to the foreground. A newly installed worker calls skipWaiting(), takes
+// control immediately, and this page reloads once so the newest assets are used.
+if("serviceWorker" in navigator){
+  let refreshing=false;
+  let registration=null;
+
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    if(refreshing)return;
+    refreshing=true;
+    window.location.reload();
+  });
+
+  window.addEventListener("load",async()=>{
+    try{
+      registration=await navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"});
+      await registration.update();
+    }catch(err){
+      console.error("Service worker registration/update failed",err);
+    }
+  });
+
+  document.addEventListener("visibilitychange",()=>{
+    if(!document.hidden){
+      render();
+      registration?.update().catch(()=>{});
+    }
+  });
+
+  // Also check periodically while the PWA stays open for a long time.
+  setInterval(()=>registration?.update().catch(()=>{}),60*60*1000);
+}else{
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)render()});
+}
+
+render();setInterval(render,1000);
