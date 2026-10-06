@@ -1,4 +1,4 @@
-const CACHE = "long-stopwatch-v6";
+const CACHE = "long-stopwatch-v7";
 const ASSETS = [
   "./",
   "./index.html",
@@ -10,7 +10,8 @@ const ASSETS = [
   "./manifest.webmanifest",
   "./icons/icon-192.webp",
   "./icons/icon-512.webp",
-  "./icons/icon-maskable-512.webp"
+  "./icons/icon-maskable-512.webp",
+  "./icons/milestones.svg"
 ];
 
 self.addEventListener("install", (event) => {
