@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0d10" />
+  <meta name="description" content="可以養幾年都不怕爆表的長期碼表 PWA" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="stylesheet" href="./styles.css" />
+  <title>長命碼表</title>
+</head>
+<body>
+  <main class="app-shell">
+    <section class="card hero">
+      <div class="eyebrow">長命碼表</div>
+      <h1 id="title">我的碼表</h1>
+      <div id="statusPill" class="status-pill stopped">尚未出生</div>
+
+      <div class="elapsed-wrap" aria-live="polite">
+        <div class="days-row">
+          <span id="days" class="days">0</span>
+          <span class="unit">天</span>
+        </div>
+        <div class="clock-row">
+          <span id="hours">00</span><span class="sep">:</span><span id="minutes">00</span><span class="sep">:</span><span id="seconds">00</span>
+        </div>
+      </div>
+
+      <div class="meta-grid">
+        <div class="meta">
+          <span class="label">出生時間</span>
+          <strong id="startedAtText">—</strong>
+        </div>
+        <div class="meta">
+          <span class="label">目前稱號</span>
+          <strong id="rankText">待機中的蛋</strong>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="startBtn" class="btn primary">開始養</button>
+        <button id="editBtn" class="btn">調整出生時間</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>里程碑</h2>
+      <div id="milestones" class="milestones"></div>
+    </section>
+
+    <section class="card">
+      <h2>備份</h2>
+      <p class="hint">碼表只保存一個開始時間戳，所以關 App、重開機、離線都不怕。養很久時建議偶爾匯出備份。</p>
+      <div class="actions compact">
+        <button id="exportBtn" class="btn">匯出備份</button>
+        <button id="importBtn" class="btn">匯入備份</button>
+        <input id="importFile" type="file" accept="application/json" hidden />
+      </div>
+    </section>
+
+    <section class="card danger-zone">
+      <h2>危險區</h2>
+      <p class="hint">重置需要長按 2 秒，避免手滑把養很久的碼表送走。</p>
+      <button id="resetBtn" class="btn danger" aria-label="長按兩秒重置">長按重置</button>
+      <div id="holdProgress" class="hold-progress"><div></div></div>
+    </section>
+
+    <footer>
+      <span>不用背景常駐，顯示值 = 現在時間 − 出生時間。</span>
+      <button id="installBtn" class="link-btn" hidden>安裝到主畫面</button>
+    </footer>
+  </main>
+
+  <dialog id="timeDialog">
+    <form method="dialog" class="dialog-card" id="timeForm">
+      <h2>設定出生時間</h2>
+      <label>
+        名稱
+        <input id="nameInput" maxlength="32" placeholder="我的碼表" />
+      </label>
+      <label>
+        日期與時間
+        <input id="datetimeInput" type="datetime-local" required />
+      </label>
+      <div class="dialog-actions">
+        <button value="cancel" class="btn">取消</button>
+        <button id="saveTimeBtn" value="default" class="btn primary">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="./app.js"></script>
+</body>
+</html>
