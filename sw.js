@@ -1,13 +1,13 @@
-const CACHE = "long-stopwatch-v3";
+const CACHE = "long-stopwatch-v4";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=20261006-1",
-  "./app.js?v=20261006-1",
+  "./styles.css",
+  "./app.js",
   "./manifest.webmanifest",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
-  "./icons/icon-maskable-512.png"
+  "./icons/icon-192.webp",
+  "./icons/icon-512.webp",
+  "./icons/icon-maskable-512.webp"
 ];
 
 self.addEventListener("install", (event) => {
@@ -38,8 +38,6 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Always prefer the deployed version for the app shell/code. This avoids a
-  // new HTML file being paired with an older cached app.js after an update.
   event.respondWith(
     fetch(event.request)
       .then((response) => {
