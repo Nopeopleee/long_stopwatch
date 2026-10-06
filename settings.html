@@ -26,46 +26,98 @@
 </head>
 <body>
   <main class="app-shell settings-shell">
-    <header class="topbar">
-      <a class="nav-link" href="./">← 返回</a>
-      <div class="brand">設定</div>
+    <header class="settings-header">
+      <a class="back-link" href="./" aria-label="返回滴派首頁">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 5 8.5 12l7 7"/></svg>
+      </a>
+      <div>
+        <div class="settings-title">設定</div>
+        <div class="settings-subtitle">調整滴派的外觀與資料</div>
+      </div>
     </header>
 
-    <section class="card">
-      <h2>外觀</h2>
-      <p class="hint">選擇滴派的布景主題；「跟隨裝置」會自動配合手機的淺色 / 深色模式。</p>
-      <div class="theme-picker" role="group" aria-label="布景主題">
-        <button type="button" class="theme-option" data-theme-value="system" aria-pressed="false">跟隨裝置</button>
-        <button type="button" class="theme-option" data-theme-value="light" aria-pressed="false">淺色</button>
-        <button type="button" class="theme-option" data-theme-value="dark" aria-pressed="false">深色</button>
+    <section class="settings-section" aria-labelledby="appearanceTitle">
+      <h2 id="appearanceTitle" class="settings-section-title">外觀</h2>
+      <div class="settings-list">
+        <div class="settings-row">
+          <div class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.64 5.64l1.42 1.42m9.88 9.88 1.42 1.42m0-12.72-1.42 1.42M7.06 16.94l-1.42 1.42"/><circle cx="12" cy="12" r="4"/></svg>
+          </div>
+          <div class="settings-copy">
+            <strong>布景主題</strong>
+            <span>淺色、深色或跟隨裝置</span>
+          </div>
+          <select id="themeSelect" class="settings-select" aria-label="布景主題">
+            <option value="system">跟隨裝置</option>
+            <option value="light">淺色</option>
+            <option value="dark">深色</option>
+          </select>
+        </div>
       </div>
     </section>
 
-    <section class="card">
-      <h2>資料與備份</h2>
-      <p class="hint">匯出的檔案包含寵物名稱與出生時間。養很久時建議偶爾備份一次。</p>
-      <div class="actions compact">
-        <button id="exportBtn" class="btn">匯出備份</button>
-        <button id="importBtn" class="btn">匯入備份</button>
+    <section class="settings-section" aria-labelledby="dataTitle">
+      <h2 id="dataTitle" class="settings-section-title">資料</h2>
+      <div class="settings-list">
+        <button id="exportBtn" type="button" class="settings-row settings-action">
+          <span class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>匯出備份</strong>
+            <span>保存寵物名稱與出生時間</span>
+          </span>
+          <span class="settings-chevron" aria-hidden="true">›</span>
+        </button>
+
+        <button id="importBtn" type="button" class="settings-row settings-action">
+          <span class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 21V9m0 0 4 4m-4-4-4 4M5 7V4h14v3"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>匯入備份</strong>
+            <span>從備份檔還原滴派</span>
+          </span>
+          <span class="settings-chevron" aria-hidden="true">›</span>
+        </button>
         <input id="importFile" type="file" accept="application/json" hidden />
       </div>
     </section>
 
-    <section class="card">
-      <h2>安裝</h2>
-      <p class="hint">如果瀏覽器支援，可把滴派安裝成獨立 App。</p>
-      <div class="actions compact">
-        <button id="installBtn" class="btn" hidden>安裝到主畫面</button>
-        <span id="installStatus" class="hint">目前瀏覽器可能已安裝或不支援直接安裝。</span>
+    <section class="settings-section" aria-labelledby="appTitle">
+      <h2 id="appTitle" class="settings-section-title">App</h2>
+      <div class="settings-list">
+        <button id="installBtn" type="button" class="settings-row settings-action" disabled>
+          <span class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>安裝到主畫面</strong>
+            <span id="installStatus">檢查安裝狀態中…</span>
+          </span>
+          <span class="settings-chevron" aria-hidden="true">›</span>
+        </button>
       </div>
     </section>
 
-    <section class="card danger-zone">
-      <h2>危險區</h2>
-      <p class="hint">重置會刪除目前寵物，出生時間與名稱都會清空。需要長按 2 秒確認。</p>
-      <button id="resetBtn" class="btn danger" aria-label="長按兩秒重置">長按重置滴派</button>
-      <div id="holdProgress" class="hold-progress"><div></div></div>
+    <section class="settings-section danger-settings" aria-labelledby="dangerTitle">
+      <h2 id="dangerTitle" class="settings-section-title">危險區</h2>
+      <div class="settings-list">
+        <button id="resetBtn" type="button" class="settings-row settings-action danger-row" aria-label="長按兩秒重置滴派">
+          <span class="settings-icon danger-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>重置滴派</strong>
+            <span>長按 2 秒，清除目前寵物</span>
+          </span>
+          <span class="settings-chevron" aria-hidden="true">›</span>
+          <span id="holdProgress" class="row-progress" aria-hidden="true"><span></span></span>
+        </button>
+      </div>
     </section>
+
+    <p class="settings-footnote">滴派的主要資料仍儲存在這台裝置的瀏覽器中。</p>
   </main>
 
   <script src="./common.js"></script>
