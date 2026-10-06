@@ -1,9 +1,12 @@
-const CACHE = "long-stopwatch-v4";
+const CACHE = "long-stopwatch-v5";
 const ASSETS = [
   "./",
   "./index.html",
+  "./settings.html",
   "./styles.css",
+  "./common.js",
   "./app.js",
+  "./settings.js",
   "./manifest.webmanifest",
   "./icons/icon-192.webp",
   "./icons/icon-512.webp",
