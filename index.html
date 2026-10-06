@@ -10,7 +10,7 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./icons/icon-192.png" />
   <link rel="apple-touch-icon" href="./icons/icon-192.png" />
-  <link rel="stylesheet" href="./styles.css?v=20261006-1" />
+  <link rel="stylesheet" href="./styles.css?v=20261006-2" />
   <title>滴派</title>
 </head>
 <body>
@@ -84,8 +84,8 @@
         <input id="datetimeInput" type="datetime-local" required />
       </label>
       <div class="dialog-actions">
-        <button value="cancel" class="btn">取消</button>
-        <button id="saveTimeBtn" value="default" class="btn primary">儲存</button>
+        <button id="cancelTimeBtn" type="button" class="btn">取消</button>
+        <button id="saveTimeBtn" type="button" class="btn primary">儲存</button>
       </div>
     </form>
   </dialog>
@@ -98,12 +98,12 @@
         <input id="renameInput" maxlength="32" placeholder="我的碼表" autocomplete="off" />
       </label>
       <div class="dialog-actions">
-        <button value="cancel" class="btn">取消</button>
-        <button id="saveRenameBtn" value="default" class="btn primary">改名</button>
+        <button id="cancelRenameBtn" type="button" class="btn">取消</button>
+        <button id="saveRenameBtn" type="button" class="btn primary">改名</button>
       </div>
     </form>
   </dialog>
 
-  <script src="./app.js?v=20261006-1"></script>
+  <script src="./app.js?v=20261006-2"></script>
 </body>
 </html>
