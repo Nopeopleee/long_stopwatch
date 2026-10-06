@@ -57,7 +57,7 @@
         </div>
       </div>
 
-      <div class="time-stage" aria-live="polite">
+      <div class="time-stage" role="timer" aria-live="off" aria-label="已陪伴時間">
         <div class="ripple ripple-one" aria-hidden="true"></div>
         <div class="ripple ripple-two" aria-hidden="true"></div>
         <div class="ripple ripple-three" aria-hidden="true"></div>
@@ -105,6 +105,8 @@
     </footer>
   </main>
 
+  <div id="liveStatus" role="status" aria-live="polite" aria-atomic="true" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0"></div>
+
   <dialog id="renameDialog">
     <form method="dialog" class="dialog-card" id="renameForm">
       <div class="dialog-kicker">改名字</div>
@@ -121,6 +123,6 @@
   </dialog>
 
   <script src="./common.js?v=award-v1"></script>
-  <script src="./app.js?v=award-v1"></script>
+  <script src="./app.js?v=perf-v1"></script>
 </body>
 </html>

@@ -6,9 +6,11 @@ const els={
   title:$("title"),statusPill:$("statusPill"),days:$("days"),hours:$("hours"),minutes:$("minutes"),seconds:$("seconds"),
   startedAtText:$("startedAtText"),rankText:$("rankText"),startBtn:$("startBtn"),renameBtn:$("renameBtn"),
   milestoneSummary:$("milestoneSummary"),milestoneCount:$("milestoneCount"),milestoneProgress:$("milestoneProgress"),milestones:$("milestones"),
-  renameDialog:$("renameDialog"),renameForm:$("renameForm"),renameInput:$("renameInput"),saveRenameBtn:$("saveRenameBtn"),cancelRenameBtn:$("cancelRenameBtn")
+  renameDialog:$("renameDialog"),renameForm:$("renameForm"),renameInput:$("renameInput"),saveRenameBtn:$("saveRenameBtn"),cancelRenameBtn:$("cancelRenameBtn"),
+  liveStatus:$("liveStatus")
 };
 const HOUR=60*60*1000,DAY=24*HOUR;
+const localDateTimeFormatter=new Intl.DateTimeFormat("zh-TW",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
 const milestoneDefs=[
   {at:1*HOUR,label:"第一滴",time:"1 小時",icon:"spark",rank:"第一滴"},
   {at:6*HOUR,label:"小小常駐",time:"6 小時",icon:"sunrise",rank:"穩定小滴"},
@@ -31,6 +33,9 @@ const milestoneDefs=[
 
 let milestoneViews=[];
 let previousDoneCount=null;
+let lastMilestoneCount=null;
+let clockTimer=null;
+let milestoneTimer=null;
 
 function loadState(){
   try{
@@ -45,20 +50,17 @@ function loadState(){
 }
 function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
 const pad2=n=>String(n).padStart(2,"0");
-function formatLocalDateTime(ts){
-  if(!ts)return"—";
-  return new Intl.DateTimeFormat("zh-TW",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(new Date(ts));
+function formatLocalDateTime(ts){return ts?localDateTimeFormatter.format(new Date(ts)):"—"}
+function getElapsed(){return state.startedAt?Math.max(0,Date.now()-state.startedAt):0}
+function milestoneCountForElapsed(elapsed){
+  const index=milestoneDefs.findIndex(m=>elapsed<m.at);
+  return index===-1?milestoneDefs.length:index;
 }
 function rankForElapsed(elapsed){
   if(!state.startedAt)return"待機中的蛋";
-  let rank="剛出生";
-  for(const milestone of milestoneDefs){
-    if(elapsed<milestone.at)break;
-    rank=milestone.rank;
-  }
-  return rank;
+  const count=milestoneCountForElapsed(elapsed);
+  return count===0?"剛出生":milestoneDefs[count-1].rank;
 }
-function getElapsed(){return state.startedAt?Math.max(0,Date.now()-state.startedAt):0}
 function formatRemaining(ms){
   if(ms<60*1000)return"不到 1 分鐘";
   if(ms<DAY){
@@ -67,6 +69,11 @@ function formatRemaining(ms){
     return`${Math.ceil(ms/HOUR)} 小時`;
   }
   return`${Math.ceil(ms/DAY).toLocaleString()} 天`;
+}
+function announce(message){
+  if(!els.liveStatus)return;
+  els.liveStatus.textContent="";
+  requestAnimationFrame(()=>{els.liveStatus.textContent=message});
 }
 function initMilestones(){
   els.milestones.innerHTML="";
@@ -78,9 +85,20 @@ function initMilestones(){
     return{item,status:item.querySelector(".milestone-status")};
   });
 }
-function renderMilestones(elapsed){
-  const doneCount=milestoneDefs.findIndex(m=>elapsed<m.at);
-  const resolvedDoneCount=doneCount===-1?milestoneDefs.length:doneCount;
+function updateClock(elapsed=getElapsed()){
+  if(!state.startedAt){
+    els.days.textContent="0";els.hours.textContent="00";els.minutes.textContent="00";els.seconds.textContent="00";
+    return;
+  }
+  const totalSeconds=Math.floor(elapsed/1000),totalDays=Math.floor(totalSeconds/86400),daySeconds=totalSeconds%86400;
+  els.days.textContent=totalDays.toLocaleString();
+  els.hours.textContent=pad2(Math.floor(daySeconds/3600));
+  els.minutes.textContent=pad2(Math.floor((daySeconds%3600)/60));
+  els.seconds.textContent=pad2(daySeconds%60);
+}
+function updateRank(elapsed=getElapsed()){els.rankText.textContent=rankForElapsed(elapsed)}
+function updateMilestones(elapsed=getElapsed(),{animateUnlock=true}={}){
+  const resolvedDoneCount=milestoneCountForElapsed(elapsed);
   const next=milestoneDefs[resolvedDoneCount]??null;
   const prevAt=resolvedDoneCount===0?0:milestoneDefs[resolvedDoneCount-1].at;
   const progress=next?Math.max(0,Math.min(100,(elapsed-prevAt)/(next.at-prevAt)*100)):100;
@@ -99,45 +117,72 @@ function renderMilestones(elapsed){
     view.status.textContent=done?"已解鎖":`還差 ${formatRemaining(m.at-elapsed)}`;
   });
 
-  if(previousDoneCount!==null&&resolvedDoneCount>previousDoneCount){
+  if(animateUnlock&&previousDoneCount!==null&&resolvedDoneCount>previousDoneCount){
+    const unlocked=[];
     for(let i=previousDoneCount;i<resolvedDoneCount;i++){
       const item=milestoneViews[i]?.item;
       if(!item)continue;
+      unlocked.push(milestoneDefs[i].label);
       item.classList.remove("just-unlocked");
       requestAnimationFrame(()=>{
         item.classList.add("just-unlocked");
         setTimeout(()=>item.classList.remove("just-unlocked"),900);
       });
     }
+    if(unlocked.length)announce(`里程碑解鎖：${unlocked.join("、")}`);
     if(navigator.vibrate)navigator.vibrate(45);
   }
+
   previousDoneCount=resolvedDoneCount;
+  lastMilestoneCount=resolvedDoneCount;
 }
-function render(){
+function renderPetState({animateUnlock=false}={}){
   els.title.textContent=state.name;
   document.body.classList.toggle("has-pet",Boolean(state.startedAt));
+  els.startedAtText.textContent=formatLocalDateTime(state.startedAt);
 
   if(!state.startedAt){
-    els.days.textContent="0";els.hours.textContent="00";els.minutes.textContent="00";els.seconds.textContent="00";
-    els.startedAtText.textContent="—";els.rankText.textContent=rankForElapsed(0);
     els.statusPill.textContent="尚未出生";els.statusPill.className="status-pill stopped";
-    els.startBtn.hidden=false;els.renameBtn.hidden=true;renderMilestones(0);return;
+    els.startBtn.hidden=false;els.renameBtn.hidden=true;
+    updateClock(0);updateRank(0);updateMilestones(0,{animateUnlock:false});
+    return;
   }
 
   const elapsed=getElapsed();
-  const totalSeconds=Math.floor(elapsed/1000),totalDays=Math.floor(totalSeconds/86400),daySeconds=totalSeconds%86400;
-  const hours=Math.floor(daySeconds/3600),minutes=Math.floor((daySeconds%3600)/60),seconds=daySeconds%60;
-  els.days.textContent=totalDays.toLocaleString();
-  els.hours.textContent=pad2(hours);els.minutes.textContent=pad2(minutes);els.seconds.textContent=pad2(seconds);
-  els.startedAtText.textContent=formatLocalDateTime(state.startedAt);els.rankText.textContent=rankForElapsed(elapsed);
   els.statusPill.textContent="存活中";els.statusPill.className="status-pill running";
   els.startBtn.hidden=true;els.renameBtn.hidden=false;
-  renderMilestones(elapsed);
+  updateClock(elapsed);updateRank(elapsed);updateMilestones(elapsed,{animateUnlock});
+}
+function tickClock(){
+  if(!state.startedAt)return;
+  const elapsed=getElapsed();
+  updateClock(elapsed);
+  const currentMilestoneCount=milestoneCountForElapsed(elapsed);
+  if(currentMilestoneCount!==lastMilestoneCount){
+    updateRank(elapsed);
+    updateMilestones(elapsed,{animateUnlock:true});
+  }
+}
+function refreshMilestoneDetails(){
+  if(!state.startedAt)return;
+  const elapsed=getElapsed();
+  updateMilestones(elapsed,{animateUnlock:false});
+}
+function startUiTimers(){
+  stopUiTimers();
+  if(document.hidden)return;
+  clockTimer=setInterval(tickClock,1000);
+  milestoneTimer=setInterval(refreshMilestoneDetails,60*1000);
+}
+function stopUiTimers(){
+  if(clockTimer){clearInterval(clockTimer);clockTimer=null}
+  if(milestoneTimer){clearInterval(milestoneTimer);milestoneTimer=null}
 }
 function startPet(){
   if(state.startedAt)return;
   state={...state,startedAt:Date.now()};
-  saveState();previousDoneCount=null;render();
+  saveState();previousDoneCount=null;lastMilestoneCount=null;
+  renderPetState();startUiTimers();announce("滴派出生了");
 }
 function openRenameDialog(){
   els.renameInput.value=state.name||"我的碼表";
@@ -147,7 +192,7 @@ function openRenameDialog(){
 function saveRenameFromDialog(){
   const name=els.renameInput.value.trim();
   if(!name){alert("名字不能是空白");return false}
-  state={...state,name};saveState();render();return true;
+  state={...state,name};saveState();els.title.textContent=state.name;announce(`名字已改成 ${state.name}`);return true;
 }
 
 els.startBtn.addEventListener("click",startPet);
@@ -157,7 +202,10 @@ els.saveRenameBtn.addEventListener("click",()=>{if(saveRenameFromDialog())els.re
 els.cancelRenameBtn.addEventListener("click",()=>els.renameDialog.close());
 els.renameInput.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();if(saveRenameFromDialog())els.renameDialog.close()}});
 
-document.addEventListener("visibilitychange",()=>{if(!document.hidden){state=loadState();previousDoneCount=null;render()}});
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden){stopUiTimers();return}
+  state=loadState();previousDoneCount=null;lastMilestoneCount=null;renderPetState();startUiTimers();
+});
 
 if("serviceWorker" in navigator){
   let refreshing=false;
@@ -169,5 +217,5 @@ if("serviceWorker" in navigator){
 }
 
 initMilestones();
-render();
-setInterval(render,1000);
+renderPetState();
+startUiTimers();

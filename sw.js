@@ -1,11 +1,11 @@
-const CACHE="dipai-v9";
-const ASSETS=[
+const CACHE="dipai-v10";
+const PRECACHE=[
   "./",
   "./index.html",
   "./settings.html",
   "./styles.css?v=award-v1",
   "./common.js?v=award-v1",
-  "./app.js?v=award-v1",
+  "./app.js?v=perf-v1",
   "./settings.js?v=award-v1",
   "./manifest.webmanifest",
   "./icons/icon-192.webp",
@@ -15,30 +15,79 @@ const ASSETS=[
 ];
 
 self.addEventListener("install",event=>{
-  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(PRECACHE)).then(()=>self.skipWaiting()));
 });
+
 self.addEventListener("activate",event=>{
-  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));
-});
-self.addEventListener("message",event=>{if(event.data?.type==="SKIP_WAITING")self.skipWaiting()});
-self.addEventListener("fetch",event=>{
-  if(event.request.method!=="GET")return;
-  const url=new URL(event.request.url);
-  if(url.origin!==self.location.origin)return;
-  event.respondWith(
-    fetch(event.request)
-      .then(response=>{
-        if(response.ok){
-          const copy=response.clone();
-          caches.open(CACHE).then(cache=>cache.put(event.request,copy));
-        }
-        return response;
-      })
-      .catch(async()=>{
-        const cached=await caches.match(event.request);
-        if(cached)return cached;
-        if(event.request.mode==="navigate")return caches.match("./index.html");
-        return Response.error();
-      })
+  event.waitUntil(
+    caches.keys()
+      .then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))
+      .then(()=>self.clients.claim())
   );
+});
+
+self.addEventListener("message",event=>{if(event.data?.type==="SKIP_WAITING")self.skipWaiting()});
+
+async function fetchAndCache(request){
+  const response=await fetch(request);
+  if(response.ok){
+    const copy=response.clone();
+    caches.open(CACHE).then(cache=>cache.put(request,copy));
+  }
+  return response;
+}
+
+async function networkFirst(request){
+  try{return await fetchAndCache(request)}
+  catch{
+    const cached=await caches.match(request);
+    if(cached)return cached;
+    if(request.mode==="navigate"){
+      const url=new URL(request.url);
+      const fallback=url.pathname.endsWith("/settings.html")?"./settings.html":"./index.html";
+      const page=await caches.match(fallback);
+      if(page)return page;
+    }
+    return Response.error();
+  }
+}
+
+async function cacheFirst(request){
+  const cached=await caches.match(request);
+  if(cached)return cached;
+  try{return await fetchAndCache(request)}catch{return Response.error()}
+}
+
+async function staleWhileRevalidate(request,event){
+  const cached=await caches.match(request);
+  const network=fetchAndCache(request).catch(()=>null);
+  if(cached){
+    event.waitUntil(network);
+    return cached;
+  }
+  return(await network)||Response.error();
+}
+
+self.addEventListener("fetch",event=>{
+  const request=event.request;
+  if(request.method!=="GET")return;
+
+  const url=new URL(request.url);
+  if(url.origin!==self.location.origin)return;
+
+  const acceptsHtml=request.headers.get("accept")?.includes("text/html");
+  const isNavigation=request.mode==="navigate"||acceptsHtml;
+  const isVersionedStatic=url.searchParams.has("v")&&/\.(?:css|js)$/i.test(url.pathname);
+
+  if(isNavigation){
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  if(isVersionedStatic){
+    event.respondWith(cacheFirst(request));
+    return;
+  }
+
+  event.respondWith(staleWhileRevalidate(request,event));
 });
