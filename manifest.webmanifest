@@ -1,7 +1,7 @@
 {
-  "name": "長命碼表",
-  "short_name": "長命碼表",
-  "description": "可以養幾年都不怕爆表的長期碼表",
+  "name": "滴派",
+  "short_name": "滴派",
+  "description": "滴派：可以養幾年都不怕爆表的長期碼表",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
