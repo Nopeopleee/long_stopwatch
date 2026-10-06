@@ -22,6 +22,7 @@
     })();
   </script>
   <link rel="stylesheet" href="./styles.css?v=award-v1" />
+  <link rel="stylesheet" href="./journey.css?v=journey-v2" />
   <style>
     .unlock-toast{position:fixed;z-index:60;left:50%;bottom:max(18px,env(safe-area-inset-bottom));width:min(470px,calc(100vw - 24px));display:grid;grid-template-columns:58px minmax(0,1fr) 34px;align-items:center;gap:12px;padding:13px 13px 13px 14px;border:1px solid var(--stroke-strong);border-radius:22px;background:linear-gradient(145deg,rgba(91,207,255,.09),rgba(139,241,215,.04)),var(--surface-solid);box-shadow:0 24px 70px rgba(0,0,0,.34);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);opacity:0;visibility:hidden;pointer-events:none;transform:translate(-50%,22px) scale(.98);transition:opacity .22s ease,transform .22s ease,visibility .22s ease}
     .unlock-toast.is-visible{opacity:1;visibility:visible;pointer-events:auto;transform:translate(-50%,0) scale(1)}
@@ -99,13 +100,53 @@
         <div>
           <span class="section-kicker">旅程</span>
           <h2>里程碑</h2>
-          <p id="milestoneSummary" class="milestone-summary">開始養之後就會累積里程碑。</p>
+          <p id="milestoneSummary" class="milestone-summary">旅程會從第一滴開始。</p>
         </div>
         <span id="milestoneCount" class="milestone-count">0 / 17</span>
       </div>
 
+      <div class="journey-glance" aria-label="里程碑摘要">
+        <article class="journey-card journey-card-recent">
+          <span class="journey-label">最近解鎖</span>
+          <div class="journey-card-main">
+            <div class="journey-badge" aria-hidden="true">
+              <svg viewBox="0 0 64 64"><use id="recentMilestoneIcon" href="./icons/milestones.svg#spark"></use></svg>
+            </div>
+            <div class="journey-copy">
+              <strong id="recentMilestoneTitle">還沒開始旅程</strong>
+              <small id="recentMilestoneMeta">開始養之後才會累積里程碑</small>
+            </div>
+          </div>
+        </article>
+
+        <article class="journey-card journey-card-next">
+          <span class="journey-label">下一個目標</span>
+          <div class="journey-card-main">
+            <div class="journey-badge" aria-hidden="true">
+              <svg viewBox="0 0 64 64"><use id="nextMilestoneIcon" href="./icons/milestones.svg#spark"></use></svg>
+            </div>
+            <div class="journey-copy">
+              <strong id="nextMilestoneTitle">第一滴</strong>
+              <small id="nextMilestoneMeta">開始養後 1 小時</small>
+            </div>
+          </div>
+        </article>
+      </div>
+
       <div class="milestone-progress" aria-hidden="true"><span id="milestoneProgress"></span></div>
-      <div id="milestones" class="milestones"></div>
+
+      <button id="milestoneToggle" class="milestone-toggle" type="button" aria-expanded="false" aria-controls="milestoneArchive">
+        <span id="milestoneToggleText">查看全部 17 個里程碑</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5"/></svg>
+      </button>
+
+      <div id="milestoneArchive" class="milestone-archive" hidden>
+        <div class="milestone-archive-head">
+          <strong>完整旅程</strong>
+          <span>從第一滴到十年神話</span>
+        </div>
+        <div id="milestones" class="milestones"></div>
+      </div>
     </section>
 
     <footer>
@@ -144,6 +185,6 @@
   </dialog>
 
   <script src="./common.js?v=award-v1"></script>
-  <script src="./app.js?v=journey-v1"></script>
+  <script src="./app.js?v=journey-v2"></script>
 </body>
 </html>
