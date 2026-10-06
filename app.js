@@ -7,6 +7,9 @@ const els={
   title:$("title"),statusPill:$("statusPill"),days:$("days"),hours:$("hours"),minutes:$("minutes"),seconds:$("seconds"),
   startedAtText:$("startedAtText"),rankText:$("rankText"),startBtn:$("startBtn"),renameBtn:$("renameBtn"),
   milestoneSummary:$("milestoneSummary"),milestoneCount:$("milestoneCount"),milestoneProgress:$("milestoneProgress"),milestones:$("milestones"),
+  recentMilestoneIcon:$("recentMilestoneIcon"),recentMilestoneTitle:$("recentMilestoneTitle"),recentMilestoneMeta:$("recentMilestoneMeta"),
+  nextMilestoneIcon:$("nextMilestoneIcon"),nextMilestoneTitle:$("nextMilestoneTitle"),nextMilestoneMeta:$("nextMilestoneMeta"),
+  milestoneToggle:$("milestoneToggle"),milestoneToggleText:$("milestoneToggleText"),milestoneArchive:$("milestoneArchive"),
   renameDialog:$("renameDialog"),renameForm:$("renameForm"),renameInput:$("renameInput"),saveRenameBtn:$("saveRenameBtn"),cancelRenameBtn:$("cancelRenameBtn"),
   liveStatus:$("liveStatus"),unlockToast:$("unlockToast"),unlockToastIcon:$("unlockToastIcon"),unlockToastTitle:$("unlockToastTitle"),
   unlockToastMeta:$("unlockToastMeta"),unlockToastDismiss:$("unlockToastDismiss")
@@ -92,6 +95,7 @@ function announce(message){
   els.liveStatus.textContent="";
   requestAnimationFrame(()=>{els.liveStatus.textContent=message});
 }
+function setMilestoneIcon(useElement,icon){useElement?.setAttribute("href",`./icons/milestones.svg#${icon}`)}
 function initMilestones(){
   els.milestones.innerHTML="";
   milestoneViews=milestoneDefs.map(m=>{
@@ -101,6 +105,29 @@ function initMilestones(){
     els.milestones.appendChild(item);
     return{item,status:item.querySelector(".milestone-status")};
   });
+}
+function updateJourneyGlance(elapsed,resolvedDoneCount,next){
+  const latest=resolvedDoneCount>0?milestoneDefs[resolvedDoneCount-1]:null;
+
+  if(latest){
+    setMilestoneIcon(els.recentMilestoneIcon,latest.icon);
+    els.recentMilestoneTitle.textContent=latest.label;
+    els.recentMilestoneMeta.textContent=`${latest.time}・已解鎖`;
+  }else{
+    setMilestoneIcon(els.recentMilestoneIcon,"spark");
+    els.recentMilestoneTitle.textContent=state.startedAt?"旅程剛開始":"還沒開始旅程";
+    els.recentMilestoneMeta.textContent=state.startedAt?"第一滴正在靠近":"開始養之後才會累積里程碑";
+  }
+
+  if(next){
+    setMilestoneIcon(els.nextMilestoneIcon,next.icon);
+    els.nextMilestoneTitle.textContent=next.label;
+    els.nextMilestoneMeta.textContent=state.startedAt?`還差 ${formatRemaining(next.at-elapsed)}`:`開始養後 ${next.time}`;
+  }else{
+    setMilestoneIcon(els.nextMilestoneIcon,"galaxy");
+    els.nextMilestoneTitle.textContent="全部完成";
+    els.nextMilestoneMeta.textContent="十年神話已經寫完";
+  }
 }
 function animateMilestoneRange(fromCount,toCount){
   for(let i=fromCount;i<toCount;i++){
@@ -161,10 +188,11 @@ function updateMilestones(elapsed=getElapsed(),{animateUnlock=true}={}){
 
   els.milestoneCount.textContent=`${resolvedDoneCount} / ${milestoneDefs.length}`;
   els.milestoneProgress.style.width=`${progress}%`;
+  updateJourneyGlance(elapsed,resolvedDoneCount,next);
 
-  if(!state.startedAt)els.milestoneSummary.textContent="開始養之後就會累積里程碑。";
-  else if(next)els.milestoneSummary.textContent=`下一個：${next.label}・還差 ${formatRemaining(next.at-elapsed)}`;
-  else els.milestoneSummary.textContent="全部里程碑都解鎖了。這隻滴派已經成精。";
+  if(!state.startedAt)els.milestoneSummary.textContent="旅程會從第一滴開始。";
+  else if(next)els.milestoneSummary.textContent=`已完成 ${resolvedDoneCount} 個里程碑・正在前往 ${next.label}`;
+  else els.milestoneSummary.textContent="17 個里程碑全部解鎖。這隻滴派已經成精。";
 
   milestoneDefs.forEach((m,index)=>{
     const done=elapsed>=m.at;
@@ -239,6 +267,14 @@ function stopUiTimers(){
   if(clockTimer){clearInterval(clockTimer);clockTimer=null}
   if(milestoneTimer){clearInterval(milestoneTimer);milestoneTimer=null}
 }
+function toggleMilestoneArchive(){
+  if(!els.milestoneArchive||!els.milestoneToggle)return;
+  const willOpen=els.milestoneArchive.hidden;
+  els.milestoneArchive.hidden=!willOpen;
+  els.milestoneToggle.setAttribute("aria-expanded",String(willOpen));
+  els.milestoneToggleText.textContent=willOpen?"收起完整旅程":`查看全部 ${milestoneDefs.length} 個里程碑`;
+  if(willOpen)announce("已展開完整里程碑列表");
+}
 function startPet(){
   if(state.startedAt)return;
   state={...state,startedAt:Date.now()};
@@ -263,6 +299,7 @@ els.saveRenameBtn.addEventListener("click",()=>{if(saveRenameFromDialog())els.re
 els.cancelRenameBtn.addEventListener("click",()=>els.renameDialog.close());
 els.renameInput.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();if(saveRenameFromDialog())els.renameDialog.close()}});
 els.unlockToastDismiss?.addEventListener("click",hideUnlockToast);
+els.milestoneToggle?.addEventListener("click",toggleMilestoneArchive);
 
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden){stopUiTimers();return}
