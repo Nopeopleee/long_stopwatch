@@ -1,18 +1,12 @@
 const STORAGE_KEY="long-stopwatch-v1";
-const THEME_KEY="dipai-theme";
 const defaultState={name:"我的碼表",startedAt:null};
-let state=loadState(),deferredInstallPrompt=null,holdTimer=null,holdStart=0;
+let state=loadState(),holdTimer=null,holdStart=0;
 const $=id=>document.getElementById(id);
-const els={title:$("title"),statusPill:$("statusPill"),days:$("days"),hours:$("hours"),minutes:$("minutes"),seconds:$("seconds"),startedAtText:$("startedAtText"),rankText:$("rankText"),startBtn:$("startBtn"),renameBtn:$("renameBtn"),exportBtn:$("exportBtn"),importBtn:$("importBtn"),importFile:$("importFile"),resetBtn:$("resetBtn"),holdProgress:$("holdProgress").firstElementChild,milestones:$("milestones"),renameDialog:$("renameDialog"),renameForm:$("renameForm"),renameInput:$("renameInput"),saveRenameBtn:$("saveRenameBtn"),cancelRenameBtn:$("cancelRenameBtn"),installBtn:$("installBtn"),themeColorMeta:$("themeColorMeta"),themeOptions:[...document.querySelectorAll(".theme-option")]};
+const els={title:$("title"),statusPill:$("statusPill"),days:$("days"),hours:$("hours"),minutes:$("minutes"),seconds:$("seconds"),startedAtText:$("startedAtText"),rankText:$("rankText"),startBtn:$("startBtn"),renameBtn:$("renameBtn"),holdProgress:$("holdProgress")?.firstElementChild,milestones:$("milestones"),renameDialog:$("renameDialog"),renameForm:$("renameForm"),renameInput:$("renameInput"),saveRenameBtn:$("saveRenameBtn"),cancelRenameBtn:$("cancelRenameBtn")};
 const milestoneDefs=[{days:1,label:"存活一天",icon:"🌱"},{days:7,label:"滿一週",icon:"🪴"},{days:30,label:"滿月",icon:"🌙"},{days:100,label:"百日",icon:"💯"},{days:365,label:"一歲生日",icon:"🎂"},{days:1000,label:"千日傳說",icon:"🏆"}];
-const systemThemeQuery=matchMedia("(prefers-color-scheme: light)");
 
 function loadState(){try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return{...defaultState};const p=JSON.parse(raw);return{name:typeof p.name==="string"&&p.name.trim()?p.name.trim():defaultState.name,startedAt:Number.isFinite(p.startedAt)?p.startedAt:null}}catch{return{...defaultState}}}
 function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
-function getThemePreference(){const value=localStorage.getItem(THEME_KEY);return["system","light","dark"].includes(value)?value:"system"}
-function resolveTheme(preference=getThemePreference()){return preference==="system"?(systemThemeQuery.matches?"light":"dark"):preference}
-function applyTheme(preference=getThemePreference()){const resolved=resolveTheme(preference);document.documentElement.dataset.theme=resolved;els.themeColorMeta?.setAttribute("content",resolved==="light"?"#f4f6fb":"#0b0d10");els.themeOptions.forEach(btn=>btn.setAttribute("aria-pressed",String(btn.dataset.themeValue===preference)))}
-function setThemePreference(preference){if(!["system","light","dark"].includes(preference))return;localStorage.setItem(THEME_KEY,preference);applyTheme(preference)}
 const pad2=n=>String(n).padStart(2,"0");
 function formatLocalDateTime(ts){if(!ts)return"—";return new Intl.DateTimeFormat("zh-TW",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(new Date(ts))}
 function rankForDays(days){if(days>=1000)return"千日老祖";if(days>=365)return"一歲老碼表";if(days>=100)return"百日長老";if(days>=30)return"滿月碼表";if(days>=7)return"穩定存活中";if(days>=1)return"幼年碼表";return state.startedAt?"剛出生":"待機中的蛋"}
@@ -22,10 +16,6 @@ function render(){els.title.textContent=state.name;if(!state.startedAt){els.days
 function startPet(){if(state.startedAt)return;state={...state,startedAt:Date.now()};saveState();render()}
 function openRenameDialog(){els.renameInput.value=state.name||"我的碼表";els.renameDialog.showModal();requestAnimationFrame(()=>{els.renameInput.focus();els.renameInput.select()})}
 function saveRenameFromDialog(){const name=els.renameInput.value.trim();if(!name){alert("名字不能是空白");return false}state={...state,name};saveState();render();return true}
-function exportBackup(){const payload={version:1,exportedAt:Date.now(),state};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`long-stopwatch-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url)}
-async function importBackup(file){try{const text=await file.text(),payload=JSON.parse(text),incoming=payload?.state??payload;if(!Number.isFinite(incoming.startedAt)||typeof incoming.name!=="string")throw new Error("格式不正確");if(incoming.startedAt>Date.now()+60000)throw new Error("出生時間在未來");state={name:incoming.name.trim()||"我的碼表",startedAt:incoming.startedAt};saveState();render();alert("備份已匯入")}catch(err){alert(`匯入失敗：${err.message}`)}finally{els.importFile.value=""}}
-function startHoldReset(){if(!state.startedAt)return;clearInterval(holdTimer);holdStart=performance.now();holdTimer=setInterval(()=>{const elapsed=performance.now()-holdStart,pct=Math.min(100,elapsed/2000*100);els.holdProgress.style.width=`${pct}%`;if(elapsed>=2000){clearInterval(holdTimer);holdTimer=null;state={...defaultState};saveState();render();els.holdProgress.style.width="0%";if(navigator.vibrate)navigator.vibrate([80,50,120])}},40)}
-function cancelHoldReset(){clearInterval(holdTimer);holdTimer=null;els.holdProgress.style.width="0%"}
 
 els.startBtn.addEventListener("click",startPet);
 els.renameBtn.addEventListener("click",openRenameDialog);
@@ -33,21 +23,16 @@ els.renameForm.addEventListener("submit",e=>e.preventDefault());
 els.saveRenameBtn.addEventListener("click",()=>{if(saveRenameFromDialog())els.renameDialog.close()});
 els.cancelRenameBtn.addEventListener("click",()=>els.renameDialog.close());
 els.renameInput.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();if(saveRenameFromDialog())els.renameDialog.close()}});
-els.themeOptions.forEach(btn=>btn.addEventListener("click",()=>setThemePreference(btn.dataset.themeValue)));
-systemThemeQuery.addEventListener?.("change",()=>{if(getThemePreference()==="system")applyTheme("system")});
-els.exportBtn.addEventListener("click",exportBackup);els.importBtn.addEventListener("click",()=>els.importFile.click());els.importFile.addEventListener("change",()=>{const file=els.importFile.files?.[0];if(file)importBackup(file)});
-els.resetBtn.addEventListener("pointerdown",e=>{e.preventDefault();startHoldReset()});["pointerup","pointerleave","pointercancel"].forEach(evt=>els.resetBtn.addEventListener(evt,cancelHoldReset));
-window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();deferredInstallPrompt=event;els.installBtn.hidden=false});els.installBtn.addEventListener("click",async()=>{if(!deferredInstallPrompt)return;deferredInstallPrompt.prompt();await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;els.installBtn.hidden=true});window.addEventListener("appinstalled",()=>{els.installBtn.hidden=true;deferredInstallPrompt=null});
+
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){state=loadState();render()}});
 
 if("serviceWorker" in navigator){
   let refreshing=false;
   let registration=null;
   navigator.serviceWorker.addEventListener("controllerchange",()=>{if(refreshing)return;refreshing=true;window.location.reload()});
   window.addEventListener("load",async()=>{try{registration=await navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"});await registration.update()}catch(err){console.error("Service worker registration/update failed",err)}});
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden){render();registration?.update().catch(()=>{})}});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)registration?.update().catch(()=>{})});
   setInterval(()=>registration?.update().catch(()=>{}),60*60*1000);
-}else{
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden)render()});
 }
 
-applyTheme();render();setInterval(render,1000);
+render();setInterval(render,1000);
