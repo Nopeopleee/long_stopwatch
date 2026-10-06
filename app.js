@@ -1,4 +1,5 @@
 const STORAGE_KEY="long-stopwatch-v1";
+const MILESTONE_SEEN_KEY="dipai-last-seen-milestone-v1";
 const defaultState={name:"我的碼表",startedAt:null};
 let state=loadState();
 const $=id=>document.getElementById(id);
@@ -7,7 +8,8 @@ const els={
   startedAtText:$("startedAtText"),rankText:$("rankText"),startBtn:$("startBtn"),renameBtn:$("renameBtn"),
   milestoneSummary:$("milestoneSummary"),milestoneCount:$("milestoneCount"),milestoneProgress:$("milestoneProgress"),milestones:$("milestones"),
   renameDialog:$("renameDialog"),renameForm:$("renameForm"),renameInput:$("renameInput"),saveRenameBtn:$("saveRenameBtn"),cancelRenameBtn:$("cancelRenameBtn"),
-  liveStatus:$("liveStatus")
+  liveStatus:$("liveStatus"),unlockToast:$("unlockToast"),unlockToastIcon:$("unlockToastIcon"),unlockToastTitle:$("unlockToastTitle"),
+  unlockToastMeta:$("unlockToastMeta"),unlockToastDismiss:$("unlockToastDismiss")
 };
 const HOUR=60*60*1000,DAY=24*HOUR;
 const localDateTimeFormatter=new Intl.DateTimeFormat("zh-TW",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
@@ -36,6 +38,7 @@ let previousDoneCount=null;
 let lastMilestoneCount=null;
 let clockTimer=null;
 let milestoneTimer=null;
+let unlockToastTimer=null;
 
 function loadState(){
   try{
@@ -49,6 +52,20 @@ function loadState(){
   }catch{return{...defaultState}}
 }
 function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
+function loadMilestoneSeen(){
+  if(!state.startedAt)return null;
+  try{
+    const raw=localStorage.getItem(MILESTONE_SEEN_KEY);
+    if(!raw)return null;
+    const parsed=JSON.parse(raw);
+    if(parsed?.startedAt!==state.startedAt||!Number.isInteger(parsed?.count))return null;
+    return Math.max(0,Math.min(milestoneDefs.length,parsed.count));
+  }catch{return null}
+}
+function saveMilestoneSeen(count){
+  if(!state.startedAt){localStorage.removeItem(MILESTONE_SEEN_KEY);return}
+  localStorage.setItem(MILESTONE_SEEN_KEY,JSON.stringify({startedAt:state.startedAt,count:Math.max(0,Math.min(milestoneDefs.length,count)),seenAt:Date.now()}));
+}
 const pad2=n=>String(n).padStart(2,"0");
 function formatLocalDateTime(ts){return ts?localDateTimeFormatter.format(new Date(ts)):"—"}
 function getElapsed(){return state.startedAt?Math.max(0,Date.now()-state.startedAt):0}
@@ -85,6 +102,45 @@ function initMilestones(){
     return{item,status:item.querySelector(".milestone-status")};
   });
 }
+function animateMilestoneRange(fromCount,toCount){
+  for(let i=fromCount;i<toCount;i++){
+    const item=milestoneViews[i]?.item;
+    if(!item)continue;
+    item.classList.remove("just-unlocked");
+    requestAnimationFrame(()=>{
+      item.classList.add("just-unlocked");
+      setTimeout(()=>item.classList.remove("just-unlocked"),900);
+    });
+  }
+}
+function hideUnlockToast(){
+  if(!els.unlockToast)return;
+  clearTimeout(unlockToastTimer);unlockToastTimer=null;
+  els.unlockToast.classList.remove("is-visible");
+  setTimeout(()=>{if(!els.unlockToast.classList.contains("is-visible"))els.unlockToast.hidden=true},220);
+}
+function showMissedUnlocks(fromCount,toCount){
+  const unlocked=milestoneDefs.slice(fromCount,toCount);
+  if(!unlocked.length)return;
+  const latest=unlocked[unlocked.length-1];
+  animateMilestoneRange(fromCount,toCount);
+
+  if(els.unlockToast){
+    els.unlockToastIcon?.setAttribute("href",`./icons/milestones.svg#${latest.icon}`);
+    els.unlockToastTitle.textContent=latest.label;
+    els.unlockToastMeta.textContent=unlocked.length===1
+      ? `${latest.time}・你離開時悄悄達成了`
+      : `離開期間共解鎖 ${unlocked.length} 個・最新是 ${latest.time}`;
+    els.unlockToast.hidden=false;
+    requestAnimationFrame(()=>els.unlockToast.classList.add("is-visible"));
+    clearTimeout(unlockToastTimer);
+    unlockToastTimer=setTimeout(hideUnlockToast,7000);
+  }
+
+  const names=unlocked.map(m=>m.label).join("、");
+  announce(`歡迎回來，離開期間解鎖里程碑：${names}`);
+  if(navigator.vibrate)navigator.vibrate([45,45,75]);
+}
 function updateClock(elapsed=getElapsed()){
   if(!state.startedAt){
     els.days.textContent="0";els.hours.textContent="00";els.minutes.textContent="00";els.seconds.textContent="00";
@@ -118,19 +174,11 @@ function updateMilestones(elapsed=getElapsed(),{animateUnlock=true}={}){
   });
 
   if(animateUnlock&&previousDoneCount!==null&&resolvedDoneCount>previousDoneCount){
-    const unlocked=[];
-    for(let i=previousDoneCount;i<resolvedDoneCount;i++){
-      const item=milestoneViews[i]?.item;
-      if(!item)continue;
-      unlocked.push(milestoneDefs[i].label);
-      item.classList.remove("just-unlocked");
-      requestAnimationFrame(()=>{
-        item.classList.add("just-unlocked");
-        setTimeout(()=>item.classList.remove("just-unlocked"),900);
-      });
-    }
-    if(unlocked.length)announce(`里程碑解鎖：${unlocked.join("、")}`);
+    const unlocked=milestoneDefs.slice(previousDoneCount,resolvedDoneCount);
+    animateMilestoneRange(previousDoneCount,resolvedDoneCount);
+    if(unlocked.length)announce(`里程碑解鎖：${unlocked.map(m=>m.label).join("、")}`);
     if(navigator.vibrate)navigator.vibrate(45);
+    saveMilestoneSeen(resolvedDoneCount);
   }
 
   previousDoneCount=resolvedDoneCount;
@@ -142,6 +190,7 @@ function renderPetState({animateUnlock=false}={}){
   els.startedAtText.textContent=formatLocalDateTime(state.startedAt);
 
   if(!state.startedAt){
+    localStorage.removeItem(MILESTONE_SEEN_KEY);
     els.statusPill.textContent="尚未出生";els.statusPill.className="status-pill stopped";
     els.startBtn.hidden=false;els.renameBtn.hidden=true;
     updateClock(0);updateRank(0);updateMilestones(0,{animateUnlock:false});
@@ -152,6 +201,18 @@ function renderPetState({animateUnlock=false}={}){
   els.statusPill.textContent="存活中";els.statusPill.className="status-pill running";
   els.startBtn.hidden=true;els.renameBtn.hidden=false;
   updateClock(elapsed);updateRank(elapsed);updateMilestones(elapsed,{animateUnlock});
+}
+function surfaceMissedMilestones(){
+  if(!state.startedAt)return;
+  const currentCount=milestoneCountForElapsed(getElapsed());
+  const seenCount=loadMilestoneSeen();
+
+  // 第一次升級到這套機制時，把當前進度當作基準，避免舊里程碑一次全部重播。
+  if(seenCount===null){saveMilestoneSeen(currentCount);return}
+  if(currentCount<=seenCount)return;
+
+  showMissedUnlocks(seenCount,currentCount);
+  saveMilestoneSeen(currentCount);
 }
 function tickClock(){
   if(!state.startedAt)return;
@@ -181,7 +242,7 @@ function stopUiTimers(){
 function startPet(){
   if(state.startedAt)return;
   state={...state,startedAt:Date.now()};
-  saveState();previousDoneCount=null;lastMilestoneCount=null;
+  saveState();previousDoneCount=null;lastMilestoneCount=null;saveMilestoneSeen(0);
   renderPetState();startUiTimers();announce("滴派出生了");
 }
 function openRenameDialog(){
@@ -201,10 +262,12 @@ els.renameForm.addEventListener("submit",e=>e.preventDefault());
 els.saveRenameBtn.addEventListener("click",()=>{if(saveRenameFromDialog())els.renameDialog.close()});
 els.cancelRenameBtn.addEventListener("click",()=>els.renameDialog.close());
 els.renameInput.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();if(saveRenameFromDialog())els.renameDialog.close()}});
+els.unlockToastDismiss?.addEventListener("click",hideUnlockToast);
 
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden){stopUiTimers();return}
-  state=loadState();previousDoneCount=null;lastMilestoneCount=null;renderPetState();startUiTimers();
+  state=loadState();previousDoneCount=null;lastMilestoneCount=null;
+  renderPetState();surfaceMissedMilestones();startUiTimers();
 });
 
 if("serviceWorker" in navigator){
@@ -218,4 +281,5 @@ if("serviceWorker" in navigator){
 
 initMilestones();
 renderPetState();
+surfaceMissedMilestones();
 startUiTimers();

@@ -1,11 +1,11 @@
-const CACHE="dipai-v10";
+const CACHE="dipai-v11";
 const PRECACHE=[
   "./",
   "./index.html",
   "./settings.html",
   "./styles.css?v=award-v1",
   "./common.js?v=award-v1",
-  "./app.js?v=perf-v1",
+  "./app.js?v=journey-v1",
   "./settings.js?v=award-v1",
   "./manifest.webmanifest",
   "./icons/icon-192.webp",
