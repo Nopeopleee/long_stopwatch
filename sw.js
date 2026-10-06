@@ -31,8 +31,8 @@ self.addEventListener("message",event=>{if(event.data?.type==="SKIP_WAITING")sel
 async function fetchAndCache(request){
   const response=await fetch(request);
   if(response.ok){
-    const copy=response.clone();
-    caches.open(CACHE).then(cache=>cache.put(request,copy));
+    const cache=await caches.open(CACHE);
+    await cache.put(request,response.clone());
   }
   return response;
 }
@@ -58,14 +58,13 @@ async function cacheFirst(request){
   try{return await fetchAndCache(request)}catch{return Response.error()}
 }
 
-async function staleWhileRevalidate(request,event){
-  const cached=await caches.match(request);
+function staleWhileRevalidate(request,event){
   const network=fetchAndCache(request).catch(()=>null);
-  if(cached){
-    event.waitUntil(network);
-    return cached;
-  }
-  return(await network)||Response.error();
+  event.waitUntil(network);
+  return caches.match(request).then(cached=>{
+    if(cached)return cached;
+    return network.then(response=>response||Response.error());
+  });
 }
 
 self.addEventListener("fetch",event=>{
