@@ -26,8 +26,13 @@
 </head>
 <body>
   <main class="app-shell">
+    <header class="topbar">
+      <div class="brand">滴派</div>
+      <a class="nav-link" href="./settings.html" aria-label="設定">⚙️ 設定</a>
+    </header>
+
     <section class="card hero">
-      <div class="eyebrow">滴派</div>
+      <div class="eyebrow">LONG-LIVED STOPWATCH PET</div>
       <h1 id="title">我的碼表</h1>
       <div id="statusPill" class="status-pill stopped">尚未出生</div>
 
@@ -59,40 +64,12 @@
     </section>
 
     <section class="card">
-      <h2>外觀</h2>
-      <p class="hint">選擇滴派的布景主題；「跟隨裝置」會自動配合手機的淺色 / 深色模式。</p>
-      <div class="theme-picker" role="group" aria-label="布景主題">
-        <button type="button" class="theme-option" data-theme-value="system" aria-pressed="false">跟隨裝置</button>
-        <button type="button" class="theme-option" data-theme-value="light" aria-pressed="false">淺色</button>
-        <button type="button" class="theme-option" data-theme-value="dark" aria-pressed="false">深色</button>
-      </div>
-    </section>
-
-    <section class="card">
       <h2>里程碑</h2>
       <div id="milestones" class="milestones"></div>
     </section>
 
-    <section class="card">
-      <h2>備份</h2>
-      <p class="hint">碼表只保存一個開始時間戳，所以關 App、重開機、離線都不怕。養很久時建議偶爾匯出備份。</p>
-      <div class="actions compact">
-        <button id="exportBtn" class="btn">匯出備份</button>
-        <button id="importBtn" class="btn">匯入備份</button>
-        <input id="importFile" type="file" accept="application/json" hidden />
-      </div>
-    </section>
-
-    <section class="card danger-zone">
-      <h2>危險區</h2>
-      <p class="hint">重置需要長按 2 秒，避免手滑把養很久的碼表送走。</p>
-      <button id="resetBtn" class="btn danger" aria-label="長按兩秒重置">長按重置</button>
-      <div id="holdProgress" class="hold-progress"><div></div></div>
-    </section>
-
     <footer>
       <span>不用背景常駐，顯示值 = 現在時間 − 出生時間。</span>
-      <button id="installBtn" class="link-btn" hidden>安裝到主畫面</button>
     </footer>
   </main>
 
@@ -110,6 +87,7 @@
     </form>
   </dialog>
 
+  <script src="./common.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
