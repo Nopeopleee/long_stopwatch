@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta id="themeColorMeta" name="theme-color" content="#0b0d10" />
+  <meta name="description" content="滴派設定" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icons/icon-192.webp" type="image/webp" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.webp" />
+  <script>
+    (() => {
+      try {
+        const preference = localStorage.getItem("dipai-theme") || "system";
+        const resolved = preference === "system"
+          ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
+          : preference;
+        document.documentElement.dataset.theme = resolved;
+      } catch {}
+    })();
+  </script>
+  <link rel="stylesheet" href="./styles.css" />
+  <title>設定｜滴派</title>
+</head>
+<body>
+  <main class="app-shell settings-shell">
+    <header class="topbar">
+      <a class="nav-link" href="./">← 返回</a>
+      <div class="brand">設定</div>
+    </header>
+
+    <section class="card">
+      <h2>外觀</h2>
+      <p class="hint">選擇滴派的布景主題；「跟隨裝置」會自動配合手機的淺色 / 深色模式。</p>
+      <div class="theme-picker" role="group" aria-label="布景主題">
+        <button type="button" class="theme-option" data-theme-value="system" aria-pressed="false">跟隨裝置</button>
+        <button type="button" class="theme-option" data-theme-value="light" aria-pressed="false">淺色</button>
+        <button type="button" class="theme-option" data-theme-value="dark" aria-pressed="false">深色</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>資料與備份</h2>
+      <p class="hint">匯出的檔案包含寵物名稱與出生時間。養很久時建議偶爾備份一次。</p>
+      <div class="actions compact">
+        <button id="exportBtn" class="btn">匯出備份</button>
+        <button id="importBtn" class="btn">匯入備份</button>
+        <input id="importFile" type="file" accept="application/json" hidden />
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>安裝</h2>
+      <p class="hint">如果瀏覽器支援，可把滴派安裝成獨立 App。</p>
+      <div class="actions compact">
+        <button id="installBtn" class="btn" hidden>安裝到主畫面</button>
+        <span id="installStatus" class="hint">目前瀏覽器可能已安裝或不支援直接安裝。</span>
+      </div>
+    </section>
+
+    <section class="card danger-zone">
+      <h2>危險區</h2>
+      <p class="hint">重置會刪除目前寵物，出生時間與名稱都會清空。需要長按 2 秒確認。</p>
+      <button id="resetBtn" class="btn danger" aria-label="長按兩秒重置">長按重置滴派</button>
+      <div id="holdProgress" class="hold-progress"><div></div></div>
+    </section>
+  </main>
+
+  <script src="./common.js"></script>
+  <script src="./settings.js"></script>
+</body>
+</html>
