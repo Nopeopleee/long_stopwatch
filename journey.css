@@ -1,0 +1,127 @@
+/* Journey overview: keep the home screen focused while the full 17-step archive stays one tap away. */
+.journey-glance{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin-top:20px;
+}
+.journey-card{
+  min-width:0;
+  padding:14px;
+  border:1px solid var(--stroke);
+  border-radius:20px;
+  background:var(--soft);
+  overflow:hidden;
+  position:relative;
+}
+.journey-card::after{
+  content:"";
+  position:absolute;
+  width:120px;
+  height:120px;
+  border-radius:50%;
+  right:-58px;
+  top:-70px;
+  background:rgba(91,207,255,.08);
+  filter:blur(2px);
+  pointer-events:none;
+}
+.journey-card-next{
+  background:linear-gradient(135deg,rgba(90,207,255,.075),rgba(118,235,208,.035)),var(--soft);
+  border-color:rgba(112,225,242,.13);
+}
+.journey-card-next::after{background:rgba(139,241,215,.1)}
+.journey-label{
+  display:block;
+  margin-bottom:10px;
+  color:var(--muted);
+  font-size:.68rem;
+  font-weight:760;
+  letter-spacing:.08em;
+}
+.journey-card-main{
+  position:relative;
+  z-index:1;
+  display:flex;
+  align-items:center;
+  gap:11px;
+  min-width:0;
+}
+.journey-badge{
+  width:48px;
+  height:48px;
+  display:grid;
+  place-items:center;
+  flex:0 0 auto;
+  border:1px solid var(--stroke);
+  border-radius:16px;
+  background:rgba(255,255,255,.035);
+  box-shadow:0 10px 26px rgba(35,155,210,.08);
+}
+.journey-badge svg{display:block;width:46px;height:46px}
+.journey-copy{min-width:0;display:grid;gap:4px}
+.journey-copy strong{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:.92rem;
+  font-weight:740;
+}
+.journey-copy small{
+  color:var(--muted);
+  font-size:.73rem;
+  line-height:1.35;
+}
+.milestones-card .milestone-progress{margin:16px 0 12px}
+.milestone-toggle{
+  width:100%;
+  min-height:46px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:0 14px;
+  border:1px solid var(--stroke);
+  border-radius:15px;
+  background:transparent;
+  color:var(--text);
+  cursor:pointer;
+  font:inherit;
+  font-size:.82rem;
+  font-weight:700;
+  transition:background .16s ease,border-color .16s ease,transform .16s ease;
+}
+.milestone-toggle:hover{background:var(--soft);border-color:var(--stroke-strong)}
+.milestone-toggle:active{transform:scale(.992)}
+.milestone-toggle svg{
+  width:19px;
+  height:19px;
+  fill:none;
+  stroke:var(--muted);
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  transition:transform .2s ease;
+}
+.milestone-toggle[aria-expanded="true"] svg{transform:rotate(180deg)}
+.milestone-archive{margin-top:16px;padding-top:16px;border-top:1px solid var(--stroke)}
+.milestone-archive[hidden]{display:none}
+.milestone-archive-head{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  margin:0 2px 11px;
+}
+.milestone-archive-head strong{font-size:.84rem;font-weight:750}
+.milestone-archive-head span{color:var(--muted);font-size:.72rem}
+
+@media(max-width:520px){
+  .journey-glance{grid-template-columns:1fr;gap:8px;margin-top:16px}
+  .journey-card{padding:12px 13px;border-radius:17px}
+  .journey-label{margin-bottom:8px}
+  .journey-badge{width:44px;height:44px;border-radius:14px}
+  .journey-badge svg{width:42px;height:42px}
+  .journey-copy strong{font-size:.88rem}
+  .milestone-archive-head{align-items:flex-start;flex-direction:column;gap:2px}
+}
