@@ -43,6 +43,7 @@
 
       <div class="actions">
         <button id="startBtn" class="btn primary">開始養</button>
+        <button id="renameBtn" class="btn">改名字</button>
         <button id="editBtn" class="btn">調整出生時間</button>
       </div>
     </section>
@@ -79,16 +80,26 @@
     <form method="dialog" class="dialog-card" id="timeForm">
       <h2>設定出生時間</h2>
       <label>
-        名稱
-        <input id="nameInput" maxlength="32" placeholder="我的碼表" />
-      </label>
-      <label>
         日期與時間
         <input id="datetimeInput" type="datetime-local" required />
       </label>
       <div class="dialog-actions">
         <button value="cancel" class="btn">取消</button>
         <button id="saveTimeBtn" value="default" class="btn primary">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="renameDialog">
+    <form method="dialog" class="dialog-card" id="renameForm">
+      <h2>幫寵物改名字</h2>
+      <label>
+        寵物名
+        <input id="renameInput" maxlength="32" placeholder="我的碼表" autocomplete="off" />
+      </label>
+      <div class="dialog-actions">
+        <button value="cancel" class="btn">取消</button>
+        <button id="saveRenameBtn" value="default" class="btn primary">改名</button>
       </div>
     </form>
   </dialog>
