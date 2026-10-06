@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta id="themeColorMeta" name="theme-color" content="#0b0d10" />
-  <meta name="description" content="滴派：可以養幾年都不怕爆表的長期碼表 PWA" />
+  <meta id="themeColorMeta" name="theme-color" content="#071018" />
+  <meta name="description" content="滴派：把時間養成一隻會一直長大的碼表寵物。" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="manifest" href="./manifest.webmanifest" />
@@ -21,81 +21,106 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles.css?v=award-v1" />
   <title>滴派</title>
 </head>
 <body>
+  <div class="ambient" aria-hidden="true"><span></span><span></span><span></span></div>
+
   <main class="app-shell">
     <header class="topbar home-topbar">
-      <div class="brand">滴派</div>
-      <a class="icon-link" href="./settings.html" aria-label="設定" title="設定">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.2 7.2 0 0 0-1.63-.94L14.37 2.8a.49.49 0 0 0-.49-.4h-3.84a.49.49 0 0 0-.49.4L9.18 5.32c-.59.24-1.14.56-1.64.94L5.15 5.3a.49.49 0 0 0-.61.22L2.62 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.05.31-.08.64-.08.96 0 .31.03.62.07.92l-2.02 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.23.4.32.62.22l2.37-.95c.5.39 1.06.71 1.65.96l.37 2.49c.04.24.25.4.49.4h3.84c.24 0 .45-.16.49-.4l.37-2.49c.59-.25 1.15-.57 1.65-.96l2.37.95c.23.1.5.01.62-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.04-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z"/></svg>
-      </a>
-    </header>
-
-    <section class="card hero">
-      <h1 id="title">我的碼表</h1>
-      <div id="statusPill" class="status-pill stopped">尚未出生</div>
-
-      <div class="elapsed-wrap" aria-live="polite">
-        <div class="days-row">
-          <span id="days" class="days">0</span>
-          <span class="unit">天</span>
-        </div>
-        <div class="clock-row">
-          <span id="hours">00</span><span class="sep">:</span><span id="minutes">00</span><span class="sep">:</span><span id="seconds">00</span>
+      <div class="brand-wrap" aria-label="滴派">
+        <span class="brand-drop" aria-hidden="true"></span>
+        <div>
+          <div class="brand">滴派</div>
+          <div class="brand-note">把時間養成一隻寵物</div>
         </div>
       </div>
 
-      <div class="meta-grid">
-        <div class="meta">
-          <span class="label">出生時間</span>
-          <strong id="startedAtText">—</strong>
+      <a class="icon-link" href="./settings.html" aria-label="設定" title="設定">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z"/>
+          <path d="M19.1 12.9c.1-.6.1-1.2 0-1.8l2-1.6-2-3.4-2.4 1a7.5 7.5 0 0 0-1.6-.9L14.7 3h-4l-.4 3.2c-.6.2-1.1.5-1.6.9l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 1.8l-2 1.6 2 3.4 2.4-1c.5.4 1 .7 1.6.9l.4 3.2h4l.4-3.2c.6-.2 1.1-.5 1.6-.9l2.4 1 2-3.4-2-1.6Z"/>
+        </svg>
+      </a>
+    </header>
+
+    <section class="hero surface">
+      <div class="hero-head">
+        <div class="identity">
+          <h1 id="title">我的碼表</h1>
+          <div id="statusPill" class="status-pill stopped">尚未出生</div>
         </div>
-        <div class="meta">
-          <span class="label">目前稱號</span>
+        <div class="rank-orb">
+          <span>目前稱號</span>
           <strong id="rankText">待機中的蛋</strong>
         </div>
       </div>
 
-      <div class="actions">
-        <button id="startBtn" class="btn primary">開始養</button>
-        <button id="renameBtn" class="btn">改名字</button>
+      <div class="time-stage" aria-live="polite">
+        <div class="ripple ripple-one" aria-hidden="true"></div>
+        <div class="ripple ripple-two" aria-hidden="true"></div>
+        <div class="ripple ripple-three" aria-hidden="true"></div>
+        <div class="drop-glyph" aria-hidden="true"></div>
+        <div class="elapsed-wrap">
+          <div class="days-row">
+            <span id="days" class="days">0</span>
+            <span class="unit">天</span>
+          </div>
+          <div class="clock-row">
+            <span id="hours">00</span><span class="sep">:</span><span id="minutes">00</span><span class="sep">:</span><span id="seconds">00</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-bottom">
+        <div class="meta">
+          <span class="label">出生時間</span>
+          <strong id="startedAtText">—</strong>
+        </div>
+        <div class="actions">
+          <button id="startBtn" class="btn primary">開始養</button>
+          <button id="renameBtn" class="btn">改名字</button>
+        </div>
       </div>
     </section>
 
-    <section class="card milestones-card">
+    <section class="milestones-card surface">
       <div class="milestone-head">
         <div>
+          <span class="section-kicker">旅程</span>
           <h2>里程碑</h2>
           <p id="milestoneSummary" class="milestone-summary">開始養之後就會累積里程碑。</p>
         </div>
         <span id="milestoneCount" class="milestone-count">0 / 17</span>
       </div>
+
       <div class="milestone-progress" aria-hidden="true"><span id="milestoneProgress"></span></div>
       <div id="milestones" class="milestones"></div>
     </section>
 
     <footer>
-      <span>不用背景常駐，顯示值 = 現在時間 − 出生時間。</span>
+      <span>不用背景常駐，時間會一直長大。</span>
+      <span class="footer-dot" aria-hidden="true">●</span>
     </footer>
   </main>
 
   <dialog id="renameDialog">
     <form method="dialog" class="dialog-card" id="renameForm">
-      <h2>幫寵物改名字</h2>
+      <div class="dialog-kicker">改名字</div>
+      <h2>這隻滴派要叫什麼？</h2>
       <label>
         寵物名
         <input id="renameInput" maxlength="32" placeholder="我的碼表" autocomplete="off" />
       </label>
       <div class="dialog-actions">
         <button id="cancelRenameBtn" type="button" class="btn">取消</button>
-        <button id="saveRenameBtn" type="button" class="btn primary">改名</button>
+        <button id="saveRenameBtn" type="button" class="btn primary">儲存</button>
       </div>
     </form>
   </dialog>
 
-  <script src="./common.js"></script>
-  <script src="./app.js?v=rank-v2"></script>
+  <script src="./common.js?v=award-v1"></script>
+  <script src="./app.js?v=award-v1"></script>
 </body>
 </html>
