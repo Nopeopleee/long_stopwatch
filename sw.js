@@ -1,4 +1,4 @@
-const CACHE = "long-stopwatch-v7";
+const CACHE = "long-stopwatch-v8";
 const ASSETS = [
   "./",
   "./index.html",
