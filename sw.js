@@ -1,4 +1,4 @@
-const CACHE="dipai-v14";
+const CACHE="dipai-v15";
 const PRECACHE=[
   "./",
   "./index.html",
@@ -6,15 +6,17 @@ const PRECACHE=[
   "./styles.css?v=award-v1",
   "./journey.css?v=journey-v2",
   "./share.css?v=share-v1",
+  "./mascot.css?v=growth-v1",
   "./common.js?v=award-v1",
-  "./app.js?v=journey-v2",
+  "./app.js?v=growth-v1",
   "./share-card.js?v=share-v2",
   "./settings.js?v=award-v1",
   "./manifest.webmanifest",
   "./icons/icon-192.webp",
   "./icons/icon-512.webp",
   "./icons/icon-maskable-512.webp",
-  "./icons/milestones.svg"
+  "./icons/milestones.svg",
+  "./icons/mascots.svg"
 ];
 
 self.addEventListener("install",event=>{
