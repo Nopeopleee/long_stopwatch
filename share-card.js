@@ -213,11 +213,27 @@
       const image=await getMascotImage(stageKey);
       c.save();
       c.shadowColor=p.glow;c.shadowBlur=Math.max(18,w*.09);
-      const filters={peckish:"saturate(.92) brightness(.98)",hungry:"saturate(.8) brightness(.94)",weak:"saturate(.66) brightness(.88)",sick:"saturate(.5) brightness(.82)",critical:"grayscale(.18) saturate(.38) brightness(.76)"};
+      const filters={
+        peckish:"saturate(.96) sepia(.08) brightness(1.01)",
+        hungry:"saturate(.86) sepia(.22) hue-rotate(-13deg) brightness(.98)",
+        weak:"saturate(.72) sepia(.26) hue-rotate(-18deg) brightness(.91)",
+        sick:"saturate(.68) hue-rotate(42deg) brightness(.90)",
+        critical:"grayscale(.28) saturate(.50) sepia(.12) brightness(.78)"
+      };
+      const careGlow={
+        healthy:"rgba(93,230,198,.28)",
+        peckish:"rgba(242,210,122,.28)",
+        hungry:"rgba(255,166,76,.30)",
+        weak:"rgba(255,132,92,.30)",
+        sick:"rgba(174,126,255,.32)",
+        critical:"rgba(255,82,108,.38)"
+      };
+      c.shadowColor=careGlow[careKey]||p.glow;
+      c.shadowBlur=Math.max(22,w*.11);
       if(filters[careKey])c.filter=filters[careKey];
-      if(careKey==="weak")c.globalAlpha=.86;
-      if(careKey==="sick")c.globalAlpha=.76;
-      if(careKey==="critical")c.globalAlpha=.64;
+      if(careKey==="weak")c.globalAlpha=.90;
+      if(careKey==="sick")c.globalAlpha=.86;
+      if(careKey==="critical")c.globalAlpha=.82;
       c.drawImage(image,x,y,w,h);
       c.restore();
     }catch{
