@@ -1,7 +1,7 @@
 {
-  "name": "滴派",
-  "short_name": "滴派",
-  "description": "滴派：可以養幾年都不怕爆表的長期碼表",
+  "name": "滴歲",
+  "short_name": "滴歲",
+  "description": "滴歲：把時間養成一隻會一直長大的長期碼表寵物",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
