@@ -27,6 +27,15 @@
     {at:365*DAY,key:"companion",name:"老朋友"},
     {at:1000*DAY,key:"legend",name:"傳說滴"}
   ];
+  const careStages=[
+    {at:0,key:"healthy",name:"健康"},
+    {at:1*DAY,key:"peckish",name:"有點餓"},
+    {at:2*DAY,key:"hungry",name:"飢餓"},
+    {at:3*DAY,key:"weak",name:"虛弱"},
+    {at:4*DAY,key:"sick",name:"生病"},
+    {at:6*DAY,key:"critical",name:"危急"},
+    {at:7*DAY,key:"dead",name:"死亡"}
+  ];
   let mascotSpritePromise=null;
   const mascotImageCache=new Map();
   let renderSequence=0;
@@ -39,7 +48,8 @@
       if(!Number.isFinite(parsed.startedAt))return null;
       return{
         name:typeof parsed.name==="string"&&parsed.name.trim()?parsed.name.trim():"我的碼表",
-        startedAt:parsed.startedAt
+        startedAt:parsed.startedAt,
+        care:parsed.care??null
       };
     }catch{return null}
   }
@@ -71,6 +81,13 @@
       if(elapsed<candidate.at)break;
       lifeStage=candidate;
     }
+    const careElapsed=Number.isFinite(pet.care?.lastFedAt)?Math.max(0,Date.now()-pet.care.lastFedAt):0;
+    let careStage=careStages[0];
+    for(const candidate of careStages){
+      if(careElapsed<candidate.at)break;
+      careStage=candidate;
+    }
+    if(careStage.key==="dead")careStage=careStages[5];
     return{
       name:pet.name,
       days,
@@ -81,6 +98,8 @@
       milestoneCount:$("milestoneCount")?.textContent?.trim()||"0 / 17",
       lifeStageKey:lifeStage.key,
       lifeStageName:lifeStage.name,
+      careStatusKey:careStage.key,
+      careStatusName:careStage.name,
       birth
     };
   }
@@ -175,7 +194,7 @@
     try{return await promise}catch(error){mascotImageCache.delete(stageKey);throw error}
   }
 
-  async function drawMascot(c,stageKey,x,y,w,h,p){
+  async function drawMascot(c,stageKey,careKey,x,y,w,h,p){
     c.save();
     const cx=x+w/2,cy=y+h*.58;
     c.strokeStyle=p.accent;c.lineWidth=2;c.globalAlpha=.13;
@@ -189,6 +208,11 @@
       const image=await getMascotImage(stageKey);
       c.save();
       c.shadowColor=p.glow;c.shadowBlur=Math.max(18,w*.09);
+      const filters={peckish:"saturate(.92) brightness(.98)",hungry:"saturate(.8) brightness(.94)",weak:"saturate(.66) brightness(.88)",sick:"saturate(.5) brightness(.82)",critical:"grayscale(.18) saturate(.38) brightness(.76)"};
+      if(filters[careKey])c.filter=filters[careKey];
+      if(careKey==="weak")c.globalAlpha=.86;
+      if(careKey==="sick")c.globalAlpha=.76;
+      if(careKey==="critical")c.globalAlpha=.64;
       c.drawImage(image,x,y,w,h);
       c.restore();
     }catch{
@@ -260,10 +284,13 @@
     ctx.fillStyle=p.text;ctx.font="800 "+nameSize+"px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
     ctx.fillText(s.name,72,260);
 
-    await drawMascot(ctx,s.lifeStageKey,790,132,230,268,p);
+    await drawMascot(ctx,s.lifeStageKey,s.careStatusKey,790,132,230,268,p);
     fillRound(ctx,792,374,214,42,21,p.panel,p.line);
     ctx.textAlign="center";ctx.fillStyle=p.muted;ctx.font="700 16px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
-    ctx.fillText("生命階段 · "+s.lifeStageName,899,401);ctx.textAlign="left";
+    const mascotMeta=s.lifeStageName+" · "+s.careStatusName;
+    const mascotMetaSize=fitFont(ctx,mascotMeta,184,16,13,"700");
+    ctx.font="700 "+mascotMetaSize+"px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
+    ctx.fillText(mascotMeta,899,401);ctx.textAlign="left";
 
     ctx.fillStyle=p.muted;ctx.font="700 20px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
     ctx.fillText("已陪伴",72,390);
@@ -317,10 +344,13 @@
     ctx.fillStyle=p.text;ctx.font="800 "+nameSize+"px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
     ctx.fillText(s.name,72,350);
 
-    await drawMascot(ctx,s.lifeStageKey,340,420,400,466,p);
+    await drawMascot(ctx,s.lifeStageKey,s.careStatusKey,340,420,400,466,p);
     fillRound(ctx,394,838,292,48,24,p.panel,p.line);
     ctx.textAlign="center";ctx.fillStyle=p.muted;ctx.font="700 18px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
-    ctx.fillText("生命階段 · "+s.lifeStageName,540,869);ctx.textAlign="left";
+    const mascotMeta=s.lifeStageName+" · "+s.careStatusName;
+    const mascotMetaSize=fitFont(ctx,mascotMeta,248,18,15,"700");
+    ctx.font="700 "+mascotMetaSize+"px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
+    ctx.fillText(mascotMeta,540,869);ctx.textAlign="left";
 
     ctx.textAlign="center";
     ctx.fillStyle=p.muted;ctx.font="700 24px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
@@ -397,8 +427,8 @@
   }
 
   function fileName(){
-    const safe=(currentSnapshot?.name||"dipai").replace(/[\\/:*?"<>|]/g,"-").slice(0,32);
-    return "dipai-"+safe+"-"+format+".png";
+    const safe=(currentSnapshot?.name||"disui").replace(/[\\/:*?"<>|]/g,"-").slice(0,32);
+    return "disui-"+safe+"-"+format+".png";
   }
 
   function download(){

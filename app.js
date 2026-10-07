@@ -1,12 +1,13 @@
 const STORAGE_KEY="long-stopwatch-v1";
 const MILESTONE_SEEN_KEY="dipai-last-seen-milestone-v1";
 const LIFE_STAGE_SEEN_KEY="dipai-last-seen-life-stage-v1";
-const defaultState={name:"我的碼表",startedAt:null};
+const defaultState={name:"我的碼表",startedAt:null,care:null};
 let state=loadState();
 const $=id=>document.getElementById(id);
 const els={
   title:$("title"),statusPill:$("statusPill"),days:$("days"),hours:$("hours"),minutes:$("minutes"),seconds:$("seconds"),
   startedAtText:$("startedAtText"),rankText:$("rankText"),startBtn:$("startBtn"),renameBtn:$("renameBtn"),
+  careStrip:$("careStrip"),careHint:$("careHint"),careFeedCount:$("careFeedCount"),feedBtn:$("feedBtn"),feedBtnLabel:$("feedBtnLabel"),
   milestoneSummary:$("milestoneSummary"),milestoneCount:$("milestoneCount"),milestoneProgress:$("milestoneProgress"),milestones:$("milestones"),
   recentMilestoneIcon:$("recentMilestoneIcon"),recentMilestoneTitle:$("recentMilestoneTitle"),recentMilestoneMeta:$("recentMilestoneMeta"),
   nextMilestoneIcon:$("nextMilestoneIcon"),nextMilestoneTitle:$("nextMilestoneTitle"),nextMilestoneMeta:$("nextMilestoneMeta"),
@@ -19,6 +20,17 @@ const els={
   unlockToastMeta:$("unlockToastMeta"),unlockToastDismiss:$("unlockToastDismiss")
 };
 const HOUR=60*60*1000,DAY=24*HOUR;
+const CARE_COOLDOWN=12*HOUR;
+const CARE_DEATH_ENABLED=false;
+const careStatusDefs=[
+  {at:0,key:"healthy",name:"健康"},
+  {at:24*HOUR,key:"peckish",name:"有點餓"},
+  {at:48*HOUR,key:"hungry",name:"飢餓"},
+  {at:72*HOUR,key:"weak",name:"虛弱"},
+  {at:96*HOUR,key:"sick",name:"生病"},
+  {at:144*HOUR,key:"critical",name:"危急"},
+  {at:168*HOUR,key:"dead",name:"死亡"}
+];
 const localDateTimeFormatter=new Intl.DateTimeFormat("zh-TW",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
 const lifeStageDefs=[
   {at:0,key:"newborn",name:"新生滴",note:"剛凝聚出來的小水滴"},
@@ -56,16 +68,39 @@ let milestoneTimer=null;
 let unlockToastTimer=null;
 let lastLifeStageIndex=null;
 let evolutionTimer=null;
+let lastCareStatusKey=null;
 
+function createCare(now=Date.now()){
+  return{activatedAt:now,lastFedAt:now,feedCount:0,diedAt:null};
+}
+function normalizeCare(care,startedAt,now=Date.now()){
+  if(!startedAt)return null;
+  const safeNow=Math.max(startedAt,now);
+  if(!care||!Number.isFinite(care.lastFedAt))return createCare(safeNow);
+  const activatedAt=Number.isFinite(care.activatedAt)
+    ? Math.min(safeNow,Math.max(startedAt,care.activatedAt))
+    : Math.min(safeNow,Math.max(startedAt,care.lastFedAt));
+  const lastFedAt=Math.min(safeNow,Math.max(startedAt,care.lastFedAt));
+  const feedCount=Number.isInteger(care.feedCount)&&care.feedCount>=0?care.feedCount:0;
+  const diedAt=Number.isFinite(care.diedAt)?care.diedAt:null;
+  return{activatedAt,lastFedAt,feedCount,diedAt};
+}
 function loadState(){
   try{
     const raw=localStorage.getItem(STORAGE_KEY);
     if(!raw)return{...defaultState};
     const p=JSON.parse(raw);
-    return{
+    const startedAt=Number.isFinite(p.startedAt)?p.startedAt:null;
+    const care=normalizeCare(p.care,startedAt);
+    const next={
       name:typeof p.name==="string"&&p.name.trim()?p.name.trim():defaultState.name,
-      startedAt:Number.isFinite(p.startedAt)?p.startedAt:null
+      startedAt,
+      care
     };
+    if(startedAt&&JSON.stringify(p.care??null)!==JSON.stringify(care)){
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(next));
+    }
+    return next;
   }catch{return{...defaultState}}
 }
 function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
@@ -131,6 +166,40 @@ function formatRemaining(ms){
   }
   return`${Math.ceil(ms/DAY).toLocaleString()} 天`;
 }
+function formatCareRemaining(ms){
+  if(ms<=0)return"現在";
+  const minutes=Math.ceil(ms/(60*1000));
+  if(minutes<60)return`${minutes} 分鐘`;
+  const hours=Math.floor(minutes/60),rest=minutes%60;
+  if(hours<48)return rest?`${hours} 小時 ${rest} 分`:`${hours} 小時`;
+  return`${Math.ceil(ms/DAY)} 天`;
+}
+function careStatusForElapsed(elapsed){
+  let status=careStatusDefs[0];
+  for(const candidate of careStatusDefs){
+    if(elapsed<candidate.at)break;
+    status=candidate;
+  }
+  if(!CARE_DEATH_ENABLED&&status.key==="dead")return careStatusDefs[5];
+  return status;
+}
+function getCareElapsed(now=Date.now()){
+  return state.care?Math.max(0,now-state.care.lastFedAt):0;
+}
+function careHintFor(status,elapsed){
+  if(status.key==="healthy"){
+    const cooldown=CARE_COOLDOWN-elapsed;
+    if(cooldown>0)return`還很飽・${formatCareRemaining(cooldown)}後可以再餵`;
+    const hungryIn=24*HOUR-elapsed;
+    return hungryIn>0?`現在可以餵食・距離開始餓還有 ${formatCareRemaining(hungryIn)}`:"開始有點餓了。";
+  }
+  if(status.key==="peckish")return"開始有點餓了，餵一下就會恢復精神。";
+  if(status.key==="hungry")return"肚子餓了，現在很適合餵食。";
+  if(status.key==="weak")return"有點沒力氣了，餵飽牠會恢復。";
+  if(status.key==="sick")return"已經生病了，先餵飽牠讓狀態恢復。";
+  if(status.key==="critical")return CARE_DEATH_ENABLED?"現在非常危險，請盡快照顧牠。":"現在很虛弱，但這一版還不會死亡，餵飽就能救回來。";
+  return"旅程已經結束。";
+}
 function announce(message){
   if(!els.liveStatus)return;
   els.liveStatus.textContent="";
@@ -180,6 +249,69 @@ function updateLifeStage(elapsed=getElapsed(),{animateEvolution=false}={}){
     saveLifeStageSeen(index);
   }
   lastLifeStageIndex=index;
+}
+function pulseMascot(className,duration=900){
+  if(!els.mascotStageShell)return;
+  els.mascotStageShell.classList.remove(className);
+  requestAnimationFrame(()=>els.mascotStageShell.classList.add(className));
+  setTimeout(()=>els.mascotStageShell?.classList.remove(className),duration);
+}
+function updateCareUI(now=Date.now(),{announceChange=false}={}){
+  if(!state.startedAt||!state.care){
+    lastCareStatusKey=null;
+    if(els.careStrip)els.careStrip.hidden=true;
+    if(els.mascotStageShell)els.mascotStageShell.dataset.careStatus="dormant";
+    document.body.dataset.careStatus="dormant";
+    return;
+  }
+  const elapsed=getCareElapsed(now);
+  const status=careStatusForElapsed(elapsed);
+  const previous=lastCareStatusKey;
+  lastCareStatusKey=status.key;
+  if(els.careStrip)els.careStrip.hidden=false;
+  if(els.careHint)els.careHint.textContent=careHintFor(status,elapsed);
+  if(els.careFeedCount)els.careFeedCount.textContent=`有效餵食 ${state.care.feedCount.toLocaleString()} 次`;
+  if(els.feedBtn&&els.feedBtnLabel){
+    const remaining=Math.max(0,CARE_COOLDOWN-elapsed);
+    const ready=remaining<=0;
+    els.feedBtn.classList.toggle("is-ready",ready);
+    els.feedBtn.dataset.careStatus=status.key;
+    els.feedBtnLabel.textContent=ready?(status.key==="healthy"?"餵食":"餵飽牠"):"還很飽";
+    els.feedBtn.setAttribute("aria-label",ready?"餵食滴歲":`滴歲還很飽，${formatCareRemaining(remaining)}後可以再餵`);
+  }
+  els.statusPill.textContent=status.name;
+  els.statusPill.className=`status-pill running care-${status.key}`;
+  if(els.mascotStageShell)els.mascotStageShell.dataset.careStatus=status.key;
+  document.body.dataset.careStatus=status.key;
+  if(announceChange&&previous&&previous!==status.key)announce(`滴歲的照顧狀態變成${status.name}`);
+}
+function feedPet(){
+  if(!state.startedAt||!state.care)return;
+  const now=Date.now();
+  const elapsed=getCareElapsed(now);
+  const remaining=CARE_COOLDOWN-elapsed;
+  if(remaining>0){
+    pulseMascot("is-nudged",620);
+    if(els.careHint)els.careHint.textContent=`現在還很飽・${formatCareRemaining(remaining)}後再餵就好`;
+    announce(`滴歲現在還很飽，${formatCareRemaining(remaining)}後再餵`);
+    if(navigator.vibrate)navigator.vibrate(18);
+    return;
+  }
+  state={
+    ...state,
+    care:{
+      ...state.care,
+      lastFedAt:now,
+      feedCount:state.care.feedCount+1,
+      diedAt:null
+    }
+  };
+  saveState();
+  updateCareUI(now);
+  pulseMascot("is-fed",1050);
+  if(els.careHint)els.careHint.textContent="吃飽了，現在精神很好。";
+  announce(`滴歲吃飽了，累積有效餵食 ${state.care.feedCount} 次`);
+  if(navigator.vibrate)navigator.vibrate([35,35,65]);
 }
 function initMilestones(){
   els.milestones.innerHTML="";
@@ -307,14 +439,14 @@ function renderPetState({animateUnlock=false}={}){
     localStorage.removeItem(LIFE_STAGE_SEEN_KEY);
     els.statusPill.textContent="尚未出生";els.statusPill.className="status-pill stopped";
     els.startBtn.hidden=false;els.renameBtn.hidden=true;
+    updateCareUI();
     updateClock(0);updateRank(0);updateLifeStage(0,{animateEvolution:false});updateMilestones(0,{animateUnlock:false});
     return;
   }
 
   const elapsed=getElapsed();
-  els.statusPill.textContent="存活中";els.statusPill.className="status-pill running";
   els.startBtn.hidden=true;els.renameBtn.hidden=false;
-  updateClock(elapsed);updateRank(elapsed);updateLifeStage(elapsed,{animateEvolution:false});updateMilestones(elapsed,{animateUnlock});
+  updateClock(elapsed);updateRank(elapsed);updateLifeStage(elapsed,{animateEvolution:false});updateCareUI();updateMilestones(elapsed,{animateUnlock});
 }
 function surfaceMissedMilestones(){
   if(!state.startedAt)return;
@@ -349,11 +481,14 @@ function tickClock(){
   if(currentLifeStageIndex!==lastLifeStageIndex){
     updateLifeStage(elapsed,{animateEvolution:true});
   }
+  const careStatus=careStatusForElapsed(getCareElapsed());
+  if(careStatus.key!==lastCareStatusKey)updateCareUI(Date.now(),{announceChange:true});
 }
 function refreshMilestoneDetails(){
   if(!state.startedAt)return;
   const elapsed=getElapsed();
   updateMilestones(elapsed,{animateUnlock:false});
+  updateCareUI();
 }
 function startUiTimers(){
   stopUiTimers();
@@ -375,8 +510,9 @@ function toggleMilestoneArchive(){
 }
 function startPet(){
   if(state.startedAt)return;
-  state={...state,startedAt:Date.now()};
-  saveState();previousDoneCount=null;lastMilestoneCount=null;lastLifeStageIndex=null;saveMilestoneSeen(0);saveLifeStageSeen(0);
+  const bornAt=Date.now();
+  state={...state,startedAt:bornAt,care:createCare(bornAt)};
+  saveState();previousDoneCount=null;lastMilestoneCount=null;lastLifeStageIndex=null;lastCareStatusKey=null;saveMilestoneSeen(0);saveLifeStageSeen(0);
   renderPetState();startUiTimers();announce("滴歲出生了");
 }
 function openRenameDialog(){
@@ -398,11 +534,12 @@ els.cancelRenameBtn.addEventListener("click",()=>els.renameDialog.close());
 els.renameInput.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();if(saveRenameFromDialog())els.renameDialog.close()}});
 els.unlockToastDismiss?.addEventListener("click",hideUnlockToast);
 els.evolutionDismiss?.addEventListener("click",hideEvolution);
+els.feedBtn?.addEventListener("click",feedPet);
 els.milestoneToggle?.addEventListener("click",toggleMilestoneArchive);
 
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden){stopUiTimers();return}
-  state=loadState();previousDoneCount=null;lastMilestoneCount=null;lastLifeStageIndex=null;
+  state=loadState();previousDoneCount=null;lastMilestoneCount=null;lastLifeStageIndex=null;lastCareStatusKey=null;
   renderPetState();surfaceMissedMilestones();surfaceMissedLifeStage();startUiTimers();
 });
 

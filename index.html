@@ -24,7 +24,7 @@
   <link rel="stylesheet" href="./styles.css?v=award-v1" />
   <link rel="stylesheet" href="./journey.css?v=journey-v2" />
   <link rel="stylesheet" href="./share.css?v=share-v1" />
-  <link rel="stylesheet" href="./mascot.css?v=growth-v3" />
+  <link rel="stylesheet" href="./mascot.css?v=care-v1" />
   <style>
     .unlock-toast{position:fixed;z-index:60;left:50%;bottom:max(18px,env(safe-area-inset-bottom));width:min(470px,calc(100vw - 24px));display:grid;grid-template-columns:58px minmax(0,1fr) 34px;align-items:center;gap:12px;padding:13px 13px 13px 14px;border:1px solid var(--stroke-strong);border-radius:22px;background:linear-gradient(145deg,rgba(91,207,255,.09),rgba(139,241,215,.04)),var(--surface-solid);box-shadow:0 24px 70px rgba(0,0,0,.34);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);opacity:0;visibility:hidden;pointer-events:none;transform:translate(-50%,22px) scale(.98);transition:opacity .22s ease,transform .22s ease,visibility .22s ease}
     .unlock-toast.is-visible{opacity:1;visibility:visible;pointer-events:auto;transform:translate(-50%,0) scale(1)}
@@ -94,6 +94,21 @@
           </div>
         </div>
       </div>
+
+      <section id="careStrip" class="care-strip" aria-label="照顧滴歲" hidden>
+        <div class="care-copy">
+          <span class="care-kicker">照顧狀態</span>
+          <strong id="careHint">剛吃飽，現在精神很好。</strong>
+          <small id="careFeedCount">有效餵食 0 次</small>
+        </div>
+        <button id="feedBtn" class="feed-btn" type="button" aria-label="餵食滴歲">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3c-2.7 4.2-6 7.3-6 11a6 6 0 0 0 12 0c0-3.7-3.3-6.8-6-11Z"/>
+            <path d="M9.5 15.2c.8 1 1.7 1.5 2.9 1.5"/>
+          </svg>
+          <span id="feedBtnLabel">餵食</span>
+        </button>
+      </section>
 
       <div class="hero-bottom">
         <div class="meta">
@@ -248,7 +263,7 @@
   </dialog>
 
   <script src="./common.js?v=award-v1"></script>
-  <script src="./app.js?v=brand-v1"></script>
-  <script src="./share-card.js?v=brand-v1"></script>
+  <script src="./app.js?v=care-v1"></script>
+  <script src="./share-card.js?v=care-v1"></script>
 </body>
 </html>
