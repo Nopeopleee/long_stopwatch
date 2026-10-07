@@ -224,7 +224,7 @@
     ctx.fillStyle=p.muted;ctx.font="500 17px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
     ctx.fillText("時間沒有停下來，我們也還在一起。",72,986);
     ctx.textAlign="right";ctx.fillStyle=p.accent;ctx.font="750 17px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
-    ctx.fillText("DIPAI",1008,986);ctx.textAlign="left";
+    ctx.fillText("滴派",1008,986);ctx.textAlign="left";
   }
 
   function renderStory(s){
@@ -281,7 +281,7 @@
     ctx.fillText("時間沒有停下來，",72,1770);
     ctx.fillText("我們也還在一起。",72,1812);
     ctx.textAlign="right";ctx.fillStyle=p.accent;ctx.font="800 20px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
-    ctx.fillText("滴派 · DIPAI",1008,1810);ctx.textAlign="left";
+    ctx.fillText("滴派",1008,1810);ctx.textAlign="left";
   }
 
   function render(){
@@ -323,18 +323,26 @@
 
   function nativeShare(){
     if(!currentBlob||!currentSnapshot)return;
-    const file=new File([currentBlob],fileName(),{type:"image/png"});
-    const data={
-      files:[file],
-      title:"滴派 · "+currentSnapshot.name,
-      text:currentSnapshot.name+" 已經陪伴 "+currentSnapshot.days+" 天了。"
-    };
-    if(typeof navigator.share!=="function"||(typeof navigator.canShare==="function"&&!navigator.canShare({files:[file]}))){
+    if(typeof File!=="function"||typeof navigator.share!=="function"){
       download();
       announce("這個瀏覽器無法直接分享圖片，已改為下載 PNG");
       return;
     }
-    navigator.share(data).then(()=>announce("成就卡已送出分享")).catch(error=>{
+    const file=new File([currentBlob],fileName(),{type:"image/png"});
+    let canShareFiles=true;
+    try{
+      if(typeof navigator.canShare==="function")canShareFiles=navigator.canShare({files:[file]});
+    }catch{canShareFiles=false}
+    if(!canShareFiles){
+      download();
+      announce("這個瀏覽器無法直接分享圖片，已改為下載 PNG");
+      return;
+    }
+    navigator.share({
+      files:[file],
+      title:"滴派 · "+currentSnapshot.name,
+      text:currentSnapshot.name+" 已經陪伴 "+currentSnapshot.days+" 天了。"
+    }).then(()=>announce("成就卡已送出分享")).catch(error=>{
       if(error?.name!=="AbortError")announce("分享沒有成功，可以改用下載 PNG");
     });
   }
