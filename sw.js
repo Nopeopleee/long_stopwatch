@@ -1,4 +1,4 @@
-const CACHE="dipai-v17";
+const CACHE="disui-v18";
 const PRECACHE=[
   "./",
   "./index.html",
@@ -8,9 +8,9 @@ const PRECACHE=[
   "./share.css?v=share-v1",
   "./mascot.css?v=growth-v3",
   "./common.js?v=award-v1",
-  "./app.js?v=growth-v1",
-  "./share-card.js?v=share-v3",
-  "./settings.js?v=award-v1",
+  "./app.js?v=brand-v1",
+  "./share-card.js?v=brand-v1",
+  "./settings.js?v=brand-v1",
   "./manifest.webmanifest",
   "./icons/icon-192.webp",
   "./icons/icon-512.webp",
