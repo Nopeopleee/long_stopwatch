@@ -243,7 +243,7 @@
     drawDrop(c,x+20*scale,y+20*scale,24*scale,p);
     c.fillStyle=p.text;
     c.font="800 "+(30*scale)+"px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
-    c.fillText("滴派",x+58*scale,y+27*scale);
+    c.fillText("滴歲",x+58*scale,y+27*scale);
     c.fillStyle=p.muted;
     c.font="500 "+(15*scale)+"px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
     c.fillText("把時間養成一隻寵物",x+58*scale,y+50*scale);
@@ -255,7 +255,7 @@
     drawBrand(ctx,72,66,p,1);
 
     ctx.fillStyle=p.muted;ctx.font="700 22px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
-    ctx.fillText("陪伴中的滴派",72,190);
+    ctx.fillText("陪伴中的滴歲",72,190);
     const nameSize=fitFont(ctx,s.name,790,68,38,"800");
     ctx.fillStyle=p.text;ctx.font="800 "+nameSize+"px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
     ctx.fillText(s.name,72,260);
@@ -303,7 +303,7 @@
     ctx.fillStyle=p.muted;ctx.font="500 17px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
     ctx.fillText("時間沒有停下來，我們也還在一起。",72,986);
     ctx.textAlign="right";ctx.fillStyle=p.accent;ctx.font="750 17px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
-    ctx.fillText("滴派",1008,986);ctx.textAlign="left";
+    ctx.fillText("滴歲",1008,986);ctx.textAlign="left";
   }
 
   async function renderStory(s){
@@ -312,7 +312,7 @@
     drawBrand(ctx,72,82,p,1.08);
 
     ctx.fillStyle=p.muted;ctx.font="700 23px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
-    ctx.fillText("陪伴中的滴派",72,260);
+    ctx.fillText("陪伴中的滴歲",72,260);
     const nameSize=fitFont(ctx,s.name,900,82,42,"800");
     ctx.fillStyle=p.text;ctx.font="800 "+nameSize+"px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
     ctx.fillText(s.name,72,350);
@@ -361,7 +361,7 @@
     ctx.fillText("時間沒有停下來，",72,1770);
     ctx.fillText("我們也還在一起。",72,1812);
     ctx.textAlign="right";ctx.fillStyle=p.accent;ctx.font="800 20px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
-    ctx.fillText("滴派",1008,1810);ctx.textAlign="left";
+    ctx.fillText("滴歲",1008,1810);ctx.textAlign="left";
   }
 
   async function render(){
@@ -429,7 +429,7 @@
     }
     navigator.share({
       files:[file],
-      title:"滴派 · "+currentSnapshot.name,
+      title:"滴歲 · "+currentSnapshot.name,
       text:currentSnapshot.name+" 已經陪伴 "+currentSnapshot.days+" 天了。"
     }).then(()=>announce("成就卡已送出分享")).catch(error=>{
       if(error?.name!=="AbortError")announce("分享沒有成功，可以改用下載 PNG");
