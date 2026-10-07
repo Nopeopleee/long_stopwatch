@@ -1,4 +1,4 @@
-const CACHE="disui-v19";
+const CACHE="disui-v20";
 const PRECACHE=[
   "./",
   "./index.html",
@@ -12,9 +12,9 @@ const PRECACHE=[
   "./share-card.js?v=care-v1",
   "./settings.js?v=care-v1",
   "./manifest.webmanifest",
-  "./icons/icon-192.webp",
-  "./icons/icon-512.webp",
-  "./icons/icon-maskable-512.webp",
+  "./icons/icon-192.webp?v=icon-v2",
+  "./icons/icon-512.webp?v=icon-v2",
+  "./icons/icon-maskable-512.webp?v=icon-v2",
   "./icons/milestones.svg",
   "./icons/mascots.svg"
 ];
