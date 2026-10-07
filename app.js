@@ -26,21 +26,21 @@ const lifeStageDefs=[
   {at:7*DAY,key:"growing",name:"成長滴",note:"身體和核心都漸漸穩定"},
   {at:30*DAY,key:"adult",name:"成熟滴",note:"已經長成可靠的長期夥伴"},
   {at:365*DAY,key:"companion",name:"老朋友",note:"陪伴留下了屬於你們的水紋"},
-  {at:1000*DAY,key:"legend",name:"傳說滴",note:"時間把這隻滴派養成了傳說"}
+  {at:1000*DAY,key:"legend",name:"傳說滴",note:"時間把這隻滴歲養成了傳說"}
 ];
 const milestoneDefs=[
   {at:1*HOUR,label:"第一滴",time:"1 小時",icon:"spark",rank:"第一滴"},
   {at:6*HOUR,label:"小小常駐",time:"6 小時",icon:"sunrise",rank:"穩定小滴"},
   {at:12*HOUR,label:"半日相伴",time:"12 小時",icon:"halfday",rank:"半日夥伴"},
-  {at:1*DAY,label:"第一天",time:"1 天",icon:"sprout",rank:"幼年滴派"},
+  {at:1*DAY,label:"第一天",time:"1 天",icon:"sprout",rank:"幼年滴歲"},
   {at:3*DAY,label:"三日同行",time:"3 天",icon:"bubbles",rank:"三日同行者"},
   {at:7*DAY,label:"滿一週",time:"7 天",icon:"leaf",rank:"一週常駐"},
   {at:14*DAY,label:"兩週夥伴",time:"14 天",icon:"star",rank:"兩週夥伴"},
-  {at:30*DAY,label:"滿月",time:"30 天",icon:"moon",rank:"滿月滴派"},
+  {at:30*DAY,label:"滿月",time:"30 天",icon:"moon",rank:"滿月滴歲"},
   {at:50*DAY,label:"五十日",time:"50 天",icon:"gem",rank:"五十日老手"},
   {at:100*DAY,label:"百日紀念",time:"100 天",icon:"medal",rank:"百日長老"},
   {at:180*DAY,label:"半年相伴",time:"180 天",icon:"shield",rank:"半年守護者"},
-  {at:365*DAY,label:"一歲生日",time:"365 天",icon:"cake",rank:"一歲滴派"},
+  {at:365*DAY,label:"一歲生日",time:"365 天",icon:"cake",rank:"一歲滴歲"},
   {at:500*DAY,label:"五百日",time:"500 天",icon:"crown",rank:"五百日元老"},
   {at:730*DAY,label:"兩週年",time:"730 天",icon:"rings",rank:"兩週年老友"},
   {at:1000*DAY,label:"千日傳說",time:"1,000 天",icon:"trophy",rank:"千日老祖"},
@@ -165,7 +165,7 @@ function showEvolution(fromIndex,toIndex,{missed=false}={}){
     clearTimeout(evolutionTimer);
     evolutionTimer=setTimeout(hideEvolution,4600);
   }
-  announce(`滴派長大了：${stage.name}`);
+  announce(`滴歲長大了：${stage.name}`);
   if(navigator.vibrate)navigator.vibrate([55,45,95]);
 }
 function updateLifeStage(elapsed=getElapsed(),{animateEvolution=false}={}){
@@ -277,7 +277,7 @@ function updateMilestones(elapsed=getElapsed(),{animateUnlock=true}={}){
 
   if(!state.startedAt)els.milestoneSummary.textContent="旅程會從第一滴開始。";
   else if(next)els.milestoneSummary.textContent=`已完成 ${resolvedDoneCount} 個里程碑・正在前往 ${next.label}`;
-  else els.milestoneSummary.textContent="17 個里程碑全部解鎖。這隻滴派已經成精。";
+  else els.milestoneSummary.textContent="17 個里程碑全部解鎖。這隻滴歲已經成精。";
 
   milestoneDefs.forEach((m,index)=>{
     const done=elapsed>=m.at;
@@ -377,7 +377,7 @@ function startPet(){
   if(state.startedAt)return;
   state={...state,startedAt:Date.now()};
   saveState();previousDoneCount=null;lastMilestoneCount=null;lastLifeStageIndex=null;saveMilestoneSeen(0);saveLifeStageSeen(0);
-  renderPetState();startUiTimers();announce("滴派出生了");
+  renderPetState();startUiTimers();announce("滴歲出生了");
 }
 function openRenameDialog(){
   els.renameInput.value=state.name||"我的碼表";
