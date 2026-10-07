@@ -79,7 +79,7 @@
 - HTML 導航使用 **network-first**，優先取得最新版頁面，離線時再回退快取。
 - 帶版本號的 CSS / JavaScript 使用 **cache-first**；版本變更時由新的 URL 自然失效，避免每次啟動都等待網路。
 - icon、manifest、SVG 等其他同源靜態資源使用 **stale-while-revalidate**，先快速顯示快取，再於背景更新。
-- Service Worker cache 目前為 `disui-v19`。
+- Service Worker cache 目前為 `disui-v21`。
 
 ### 效能與可及性
 
@@ -272,6 +272,9 @@ App 關閉後仍可靠推播，預計搭配未來的後端與 Web Push 實作。
 - 備份升級為 version 2，同時相容 version 1。
 - 分享卡會帶入目前照顧狀態，並對 mascot 套用相應視覺。
 - 頁面回到前景時會重新從時間戳推導狀態。
+- 提供隱藏測試模式：網址加上 `?debug=1`（localhost 會自動開啟）後，設定頁會出現「測試工具」，可直接模擬 0 / 12 / 24 / 48 / 72 / 96 / 144 / 192 小時未餵食。
+- 測試模式使用獨立的 `disui-care-debug-v1` 覆蓋值，不修改真正的 `lastFedAt`、`feedCount` 或出生時間；按「恢復真實狀態」即可立即清除。
+- 測試模式中的餵食只把模擬狀態恢復到健康，不會污染真實餵食紀錄；分享卡也會讀取同一個模擬狀態，方便一起驗證。
 
 尚未啟用：
 
