@@ -21,7 +21,7 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="./styles.css?v=award-v1" />
+  <link rel="stylesheet" href="./styles.css?v=storage-v1" />
   <link rel="stylesheet" href="./journey.css?v=journey-v2" />
   <link rel="stylesheet" href="./share.css?v=share-v1" />
   <link rel="stylesheet" href="./mascot.css?v=care-v2" />
@@ -121,6 +121,18 @@
         </div>
       </div>
     </section>
+
+    <aside id="backupReminder" class="backup-reminder surface" hidden>
+      <div class="backup-reminder-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.8 8.2 7 10 4.2-1.8 7-5.4 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+      </div>
+      <div class="backup-reminder-copy">
+        <strong id="backupReminderTitle">很久沒有匯出備份了</strong>
+        <small id="backupReminderText">本機有安全副本，但清除網站資料時仍可能一起消失。</small>
+      </div>
+      <a id="backupReminderAction" href="./settings.html#data-safety" class="backup-reminder-action">去備份</a>
+      <button id="backupReminderDismiss" class="backup-reminder-dismiss" type="button" aria-label="稍後再提醒">×</button>
+    </aside>
 
     <section class="milestones-card surface">
       <div class="milestone-head">
@@ -263,7 +275,8 @@
   </dialog>
 
   <script src="./common.js?v=award-v1"></script>
-  <script src="./app.js?v=debug-v1"></script>
+  <script src="./storage.js?v=storage-v1"></script>
+  <script src="./app.js?v=storage-v1"></script>
   <script src="./share-card.js?v=debug-v2"></script>
 </body>
 </html>

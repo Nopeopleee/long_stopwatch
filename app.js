@@ -19,7 +19,9 @@ const els={
   evolutionStageMeta:$("evolutionStageMeta"),evolutionDismiss:$("evolutionDismiss"),
   renameDialog:$("renameDialog"),renameForm:$("renameForm"),renameInput:$("renameInput"),saveRenameBtn:$("saveRenameBtn"),cancelRenameBtn:$("cancelRenameBtn"),
   liveStatus:$("liveStatus"),unlockToast:$("unlockToast"),unlockToastIcon:$("unlockToastIcon"),unlockToastTitle:$("unlockToastTitle"),
-  unlockToastMeta:$("unlockToastMeta"),unlockToastDismiss:$("unlockToastDismiss")
+  unlockToastMeta:$("unlockToastMeta"),unlockToastDismiss:$("unlockToastDismiss"),
+  backupReminder:$("backupReminder"),backupReminderTitle:$("backupReminderTitle"),backupReminderText:$("backupReminderText"),
+  backupReminderDismiss:$("backupReminderDismiss"),backupReminderAction:$("backupReminderAction")
 };
 if(DEBUG_MODE){
   const settingsLink=document.querySelector('a.icon-link[href="./settings.html"]');
@@ -104,12 +106,16 @@ function loadState(){
       care
     };
     if(startedAt&&JSON.stringify(p.care??null)!==JSON.stringify(care)){
-      localStorage.setItem(STORAGE_KEY,JSON.stringify(next));
+      if(window.DisuiStorage)DisuiStorage.saveState(next,{snapshotBefore:false});
+      else localStorage.setItem(STORAGE_KEY,JSON.stringify(next));
     }
     return next;
   }catch{return{...defaultState}}
 }
-function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
+function saveState(){
+  if(window.DisuiStorage)DisuiStorage.saveState(state);
+  else localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+}
 function loadMilestoneSeen(){
   if(!state.startedAt)return null;
   try{
@@ -526,6 +532,47 @@ function stopUiTimers(){
   if(clockTimer){clearInterval(clockTimer);clockTimer=null}
   if(milestoneTimer){clearInterval(milestoneTimer);milestoneTimer=null}
 }
+function updateBackupReminder(){
+  if(!els.backupReminder||!state.startedAt||!window.DisuiStorage){if(els.backupReminder)els.backupReminder.hidden=true;return}
+  const {lastExportAt,dismissedAt}=DisuiStorage.getBackupHealth();
+  const reference=lastExportAt||state.startedAt;
+  const age=Date.now()-reference;
+  const dismissedRecently=Number.isFinite(dismissedAt)&&Date.now()-dismissedAt<7*DAY;
+  if(age<60*DAY||dismissedRecently){els.backupReminder.hidden=true;return}
+  const days=Math.floor(age/DAY);
+  els.backupReminderTitle.textContent=lastExportAt?"外部備份有點久了":"這隻滴歲還沒有外部備份";
+  els.backupReminderText.textContent=age>=90*DAY
+    ?`已經 ${days.toLocaleString()} 天沒有匯出 JSON。IndexedDB 副本無法抵抗清除網站資料。`
+    :`距離上次外部備份約 ${days.toLocaleString()} 天；有空時匯出一份 JSON 會更安心。`;
+  if(DEBUG_MODE&&els.backupReminderAction)els.backupReminderAction.href="./settings.html?debug=1#data-safety";
+  els.backupReminder.hidden=false;
+}
+async function reconcileStorageSafety({rerender=true}={}){
+  if(!window.DisuiStorage)return;
+  try{
+    const result=await DisuiStorage.reconcile();
+    if(result.action==="conflict"&&result.conflict){
+      const localDesc=DisuiStorage.describeState(result.conflict.local.state);
+      const mirrorDesc=DisuiStorage.describeState(result.conflict.mirror.state);
+      const keepLocal=confirm(`發現兩份不同的滴歲資料。\n\n目前主資料：${localDesc}\n安全副本：${mirrorDesc}\n\n按「確定」保留目前主資料；按「取消」改用安全副本。`);
+      await DisuiStorage.resolveConflict(keepLocal?"local":"mirror",result.conflict);
+    }else if(result.action==="no-valid-state"){
+      alert("滴歲的本機資料損壞，而且安全副本與復原點都無法使用。請到設定頁匯入 JSON 備份。");
+    }
+    const recovered=loadState();
+    const changed=JSON.stringify(recovered)!==JSON.stringify(state);
+    state=recovered;
+    if(rerender||changed){
+      previousDoneCount=null;lastMilestoneCount=null;lastLifeStageIndex=null;lastCareStatusKey=null;
+      renderPetState();
+    }
+    await DisuiStorage.ensureDailySnapshot(state).catch(()=>{});
+    updateBackupReminder();
+  }catch(error){
+    console.warn("Storage safety reconciliation failed",error);
+    updateBackupReminder();
+  }
+}
 function toggleMilestoneArchive(){
   if(!els.milestoneArchive||!els.milestoneToggle)return;
   const willOpen=els.milestoneArchive.hidden;
@@ -562,11 +609,15 @@ els.unlockToastDismiss?.addEventListener("click",hideUnlockToast);
 els.evolutionDismiss?.addEventListener("click",hideEvolution);
 els.feedBtn?.addEventListener("click",feedPet);
 els.milestoneToggle?.addEventListener("click",toggleMilestoneArchive);
+els.backupReminderDismiss?.addEventListener("click",()=>{
+  DisuiStorage?.dismissBackupReminder();
+  if(els.backupReminder)els.backupReminder.hidden=true;
+});
 
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden){stopUiTimers();return}
   state=loadState();previousDoneCount=null;lastMilestoneCount=null;lastLifeStageIndex=null;lastCareStatusKey=null;
-  renderPetState();surfaceMissedMilestones();surfaceMissedLifeStage();startUiTimers();
+  renderPetState();surfaceMissedMilestones();surfaceMissedLifeStage();startUiTimers();reconcileStorageSafety({rerender:false});
 });
 
 if("serviceWorker" in navigator){
@@ -583,3 +634,4 @@ renderPetState();
 surfaceMissedMilestones();
 surfaceMissedLifeStage();
 startUiTimers();
+reconcileStorageSafety({rerender:false});

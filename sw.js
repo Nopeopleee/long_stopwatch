@@ -1,16 +1,17 @@
-const CACHE="disui-v23";
+const CACHE="disui-v24";
 const PRECACHE=[
   "./",
   "./index.html",
   "./settings.html",
-  "./styles.css?v=award-v1",
+  "./styles.css?v=storage-v1",
   "./journey.css?v=journey-v2",
   "./share.css?v=share-v1",
   "./mascot.css?v=care-v2",
   "./common.js?v=award-v1",
-  "./app.js?v=debug-v1",
+  "./storage.js?v=storage-v1",
+  "./app.js?v=storage-v1",
   "./share-card.js?v=debug-v2",
-  "./settings.js?v=debug-v1",
+  "./settings.js?v=storage-v1",
   "./manifest.webmanifest",
   "./icons/icon-192.webp?v=icon-v2",
   "./icons/icon-512.webp?v=icon-v2",

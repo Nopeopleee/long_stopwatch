@@ -21,7 +21,7 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="./styles.css?v=award-v1" />
+  <link rel="stylesheet" href="./styles.css?v=storage-v1" />
   <title>設定｜滴歲</title>
 </head>
 <body>
@@ -84,6 +84,73 @@
         </button>
         <input id="importFile" type="file" accept="application/json" hidden />
       </div>
+    </section>
+
+    <section id="data-safety" class="settings-section" aria-labelledby="safetyTitle">
+      <h2 id="safetyTitle" class="settings-section-title">資料安全</h2>
+      <div class="settings-list safety-list">
+        <div class="settings-row">
+          <span class="settings-icon settings-icon-accent" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.8 8.2 7 10 4.2-1.8 7-5.4 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>本機主資料</strong>
+            <span id="primaryStorageStatus">檢查中…</span>
+          </span>
+          <span id="primaryStorageBadge" class="safety-badge">—</span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v6c0 1.7 3.1 3 7 3s7-1.3 7-3V5M5 11v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>IndexedDB 安全副本</strong>
+            <span id="mirrorStorageStatus">建立本機冗餘副本</span>
+          </span>
+          <span id="mirrorStorageBadge" class="safety-badge">—</span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="8"/><path d="M7 4.5 4.5 7M17 4.5 19.5 7"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>最近自動快照</strong>
+            <span id="snapshotStatus">檢查中…</span>
+          </span>
+          <span id="snapshotCountBadge" class="safety-badge">—</span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>最近匯出備份</strong>
+            <span id="lastExportStatus">尚未匯出</span>
+          </span>
+          <span id="backupHealthBadge" class="safety-badge">—</span>
+        </div>
+        <button id="createSnapshotBtn" type="button" class="settings-row settings-action">
+          <span class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>立即建立快照</strong>
+            <span>手動保存一個本機復原點</span>
+          </span>
+          <span class="settings-chevron" aria-hidden="true">›</span>
+        </button>
+        <button id="viewSnapshotsBtn" type="button" class="settings-row settings-action">
+          <span class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6M4 4v4.6h4.6"/><path d="M12 8v4l3 2"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>查看復原點</strong>
+            <span>最多保留最近 10 份本機快照</span>
+          </span>
+          <span class="settings-chevron" aria-hidden="true">›</span>
+        </button>
+      </div>
+      <p class="settings-footnote">安全副本和快照仍屬於這個瀏覽器的網站資料；清除網站資料或解除安裝時可能一起消失，所以 JSON 匯出仍是最重要的外部備份。</p>
     </section>
 
     <section class="settings-section" aria-labelledby="appTitle">
@@ -181,7 +248,22 @@
     <p class="settings-footnote">滴歲的主要資料目前只存在這台裝置的瀏覽器裡。</p>
   </main>
 
+  <dialog id="snapshotDialog" class="recovery-dialog" aria-labelledby="snapshotDialogTitle">
+    <div class="recovery-dialog-card">
+      <header class="recovery-dialog-head">
+        <div>
+          <span class="dialog-kicker">本機復原</span>
+          <h2 id="snapshotDialogTitle">復原點</h2>
+        </div>
+        <button id="snapshotDialogClose" class="recovery-dialog-close" type="button" aria-label="關閉復原點">×</button>
+      </header>
+      <div id="snapshotList" class="snapshot-list"></div>
+      <p class="settings-footnote">還原前會再自動保留目前狀態，因此就算選錯也還有退路。</p>
+    </div>
+  </dialog>
+
   <script src="./common.js?v=award-v1"></script>
-  <script src="./settings.js?v=debug-v1"></script>
+  <script src="./storage.js?v=storage-v1"></script>
+  <script src="./settings.js?v=storage-v1"></script>
 </body>
 </html>
