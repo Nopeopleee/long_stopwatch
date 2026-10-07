@@ -1,4 +1,4 @@
-const CACHE="disui-v21";
+const CACHE="disui-v22";
 const PRECACHE=[
   "./",
   "./index.html",
@@ -6,7 +6,7 @@ const PRECACHE=[
   "./styles.css?v=award-v1",
   "./journey.css?v=journey-v2",
   "./share.css?v=share-v1",
-  "./mascot.css?v=care-v1",
+  "./mascot.css?v=care-v2",
   "./common.js?v=award-v1",
   "./app.js?v=debug-v1",
   "./share-card.js?v=debug-v1",

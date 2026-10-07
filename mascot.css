@@ -184,3 +184,143 @@
 @media(max-width:700px){.care-strip{gap:10px;padding-top:13px}.care-copy strong{font-size:.82rem}.feed-btn{min-width:96px;min-height:42px;padding:0 12px}}
 @media(max-width:390px){.care-strip{align-items:flex-end}.care-copy strong{font-size:.76rem}.care-copy small{font-size:.64rem}.feed-btn{min-width:88px;min-height:40px;padding:0 10px;font-size:.72rem}}
 @media(prefers-reduced-motion:reduce){.mascot-stage-shell[data-care-status="critical"],.mascot-stage-shell.is-fed,.mascot-stage-shell.is-nudged{animation:none!important}}
+
+
+/* care-v2: make each care state visually distinct instead of only desaturating the mascot. */
+body[data-care-status="healthy"]{
+  --care-color:#8bf1d7;--care-bg:rgba(80,224,180,.10);--care-line:rgba(139,241,215,.25);--care-glow:rgba(93,230,198,.22)
+}
+body[data-care-status="peckish"]{
+  --care-color:#f2d27a;--care-bg:rgba(242,210,122,.10);--care-line:rgba(242,210,122,.26);--care-glow:rgba(242,210,122,.20)
+}
+body[data-care-status="hungry"]{
+  --care-color:#ffb45e;--care-bg:rgba(255,180,94,.11);--care-line:rgba(255,180,94,.28);--care-glow:rgba(255,167,76,.22)
+}
+body[data-care-status="weak"]{
+  --care-color:#ff966b;--care-bg:rgba(255,150,107,.11);--care-line:rgba(255,150,107,.29);--care-glow:rgba(255,132,92,.21)
+}
+body[data-care-status="sick"]{
+  --care-color:#c7a0ff;--care-bg:rgba(199,160,255,.11);--care-line:rgba(199,160,255,.28);--care-glow:rgba(174,126,255,.22)
+}
+body[data-care-status="critical"]{
+  --care-color:#ff7084;--care-bg:rgba(255,112,132,.12);--care-line:rgba(255,112,132,.32);--care-glow:rgba(255,82,108,.28)
+}
+:root[data-theme="light"] body[data-care-status="healthy"]{--care-color:#15896f;--care-bg:rgba(21,137,111,.09);--care-line:rgba(21,137,111,.22);--care-glow:rgba(21,137,111,.14)}
+:root[data-theme="light"] body[data-care-status="peckish"]{--care-color:#8a6a16;--care-bg:rgba(164,127,28,.09);--care-line:rgba(138,106,22,.22);--care-glow:rgba(190,151,46,.14)}
+:root[data-theme="light"] body[data-care-status="hungry"]{--care-color:#a75d13;--care-bg:rgba(184,104,24,.09);--care-line:rgba(167,93,19,.23);--care-glow:rgba(205,116,31,.15)}
+:root[data-theme="light"] body[data-care-status="weak"]{--care-color:#b34f2f;--care-bg:rgba(190,82,48,.09);--care-line:rgba(179,79,47,.23);--care-glow:rgba(205,91,53,.14)}
+:root[data-theme="light"] body[data-care-status="sick"]{--care-color:#7551b5;--care-bg:rgba(117,81,181,.09);--care-line:rgba(117,81,181,.22);--care-glow:rgba(117,81,181,.14)}
+:root[data-theme="light"] body[data-care-status="critical"]{--care-color:#c94b5f;--care-bg:rgba(201,75,95,.09);--care-line:rgba(201,75,95,.24);--care-glow:rgba(201,75,95,.16)}
+
+body[data-care-status] .status-pill.running{
+  color:var(--care-color);
+  background:var(--care-bg);
+  border-color:var(--care-line);
+  opacity:1
+}
+body[data-care-status] .status-pill.running::before{
+  box-shadow:0 0 0 0 currentColor
+}
+body[data-care-status] .care-kicker{color:var(--care-color)}
+body[data-care-status] .feed-btn.is-ready{
+  color:var(--care-color);
+  border-color:var(--care-line);
+  background:linear-gradient(135deg,var(--care-bg),transparent),var(--soft)
+}
+
+.mascot-stage-shell::before{
+  content:"";
+  position:absolute;
+  z-index:0;
+  left:10%;right:10%;top:12%;bottom:8%;
+  border-radius:50%;
+  background:radial-gradient(circle at 50% 58%,var(--care-glow,transparent),transparent 68%);
+  filter:blur(18px);
+  opacity:0;
+  transform:scale(.86);
+  transition:opacity .35s ease,transform .45s ease,background .35s ease
+}
+.mascot-stage-shell:not([data-care-status="dormant"])::before{opacity:.78;transform:scale(1)}
+.mascot-stage-shell[data-care-status] .mascot-aura{
+  border-color:var(--care-line);
+  transition:border-color .35s ease,opacity .35s ease,box-shadow .35s ease
+}
+.mascot-stage-shell[data-care-status="healthy"]{opacity:.92;filter:none;translate:0 0}
+.mascot-stage-shell[data-care-status="healthy"] .mascot-stage{
+  filter:saturate(1.06) brightness(1.03) drop-shadow(0 24px 44px rgba(83,220,211,.17))
+}
+.mascot-stage-shell[data-care-status="peckish"]{opacity:.91;filter:none;translate:0 1px}
+.mascot-stage-shell[data-care-status="peckish"] .mascot-stage{
+  filter:saturate(.96) sepia(.08) brightness(1.01) drop-shadow(0 23px 40px rgba(242,210,122,.14))
+}
+.mascot-stage-shell[data-care-status="hungry"]{opacity:.89;filter:none;translate:0 3px}
+.mascot-stage-shell[data-care-status="hungry"] .mascot-stage{
+  animation-duration:6.5s;
+  filter:saturate(.86) sepia(.22) hue-rotate(-13deg) brightness(.98) drop-shadow(0 20px 38px rgba(255,166,76,.18))
+}
+.mascot-stage-shell[data-care-status="hungry"] .mascot-aura-two{opacity:.24}
+.mascot-stage-shell[data-care-status="weak"]{opacity:.84;filter:none;translate:0 8px}
+.mascot-stage-shell[data-care-status="weak"] .mascot-stage{
+  animation-duration:8s;
+  filter:saturate(.72) sepia(.26) hue-rotate(-18deg) brightness(.91) drop-shadow(0 18px 34px rgba(255,132,92,.18))
+}
+.mascot-stage-shell[data-care-status="weak"] .mascot-aura{opacity:.32}
+.mascot-stage-shell[data-care-status="sick"]{opacity:.83;filter:none;translate:0 9px}
+.mascot-stage-shell[data-care-status="sick"] .mascot-stage{
+  animation-name:careSickDrift;
+  animation-duration:3.8s;
+  filter:saturate(.68) hue-rotate(42deg) brightness(.9) drop-shadow(0 18px 36px rgba(174,126,255,.23))
+}
+.mascot-stage-shell[data-care-status="sick"] .mascot-aura{
+  border-style:dashed;
+  opacity:.45;
+  animation:careSickAura 3s ease-in-out infinite
+}
+.mascot-stage-shell[data-care-status="critical"]{
+  opacity:.78;
+  filter:none;
+  translate:0 11px;
+  animation:none
+}
+.mascot-stage-shell[data-care-status="critical"]::before{
+  opacity:1;
+  animation:careDangerGlow 1.35s ease-in-out infinite
+}
+.mascot-stage-shell[data-care-status="critical"] .mascot-stage{
+  animation-name:careCriticalDrift;
+  animation-duration:1.55s;
+  filter:grayscale(.28) saturate(.5) sepia(.12) brightness(.78) drop-shadow(0 0 28px rgba(255,82,108,.32))
+}
+.mascot-stage-shell[data-care-status="critical"] .mascot-aura{
+  opacity:.58;
+  box-shadow:0 0 20px rgba(255,82,108,.12);
+  animation:careDangerAura 1.35s ease-in-out infinite
+}
+
+@keyframes careSickDrift{
+  0%,100%{translate:0 2px;rotate:-.6deg}
+  50%{translate:0 -3px;rotate:.8deg}
+}
+@keyframes careSickAura{
+  0%,100%{opacity:.28}
+  50%{opacity:.55}
+}
+@keyframes careCriticalDrift{
+  0%,100%{translate:0 2px;rotate:-1deg}
+  50%{translate:0 -1px;rotate:1deg}
+}
+@keyframes careDangerGlow{
+  0%,100%{opacity:.55;transform:scale(.9)}
+  50%{opacity:1;transform:scale(1.04)}
+}
+@keyframes careDangerAura{
+  0%,100%{opacity:.32;transform:translate(-50%,-50%) scale(.96)}
+  50%{opacity:.72;transform:translate(-50%,-50%) scale(1.04)}
+}
+@media(prefers-reduced-motion:reduce){
+  .mascot-stage-shell[data-care-status="sick"] .mascot-stage,
+  .mascot-stage-shell[data-care-status="sick"] .mascot-aura,
+  .mascot-stage-shell[data-care-status="critical"]::before,
+  .mascot-stage-shell[data-care-status="critical"] .mascot-stage,
+  .mascot-stage-shell[data-care-status="critical"] .mascot-aura{animation:none!important}
+}
