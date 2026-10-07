@@ -66,7 +66,7 @@
 - HTML 導航使用 **network-first**，優先取得最新版頁面，離線時再回退快取。
 - 帶版本號的 CSS / JavaScript 使用 **cache-first**；版本變更時由新的 URL 自然失效，避免每次啟動都等待網路。
 - icon、manifest、SVG 等其他同源靜態資源使用 **stale-while-revalidate**，先快速顯示快取，再於背景更新。
-- Service Worker cache 目前為 `dipai-v13`。
+- Service Worker cache 目前為 `dipai-v14`。
 
 ### 效能與可及性
 
