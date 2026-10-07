@@ -18,6 +18,18 @@
     square:{width:1080,height:1080},
     story:{width:1080,height:1920}
   };
+  const DAY=24*60*60*1000;
+  const lifeStages=[
+    {at:0,key:"newborn",name:"新生滴"},
+    {at:1*DAY,key:"baby",name:"幼滴"},
+    {at:7*DAY,key:"growing",name:"成長滴"},
+    {at:30*DAY,key:"adult",name:"成熟滴"},
+    {at:365*DAY,key:"companion",name:"老朋友"},
+    {at:1000*DAY,key:"legend",name:"傳說滴"}
+  ];
+  let mascotSpritePromise=null;
+  const mascotImageCache=new Map();
+  let renderSequence=0;
 
   function readPet(){
     try{
@@ -54,6 +66,11 @@
     const minutes=Math.floor((daySeconds%3600)/60);
     const seconds=daySeconds%60;
     const birth=new Intl.DateTimeFormat("zh-TW",{year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(pet.startedAt));
+    let lifeStage=lifeStages[0];
+    for(const candidate of lifeStages){
+      if(elapsed<candidate.at)break;
+      lifeStage=candidate;
+    }
     return{
       name:pet.name,
       days,
@@ -62,6 +79,8 @@
       recent:$("recentMilestoneTitle")?.textContent?.trim()||"旅程剛開始",
       recentMeta:$("recentMilestoneMeta")?.textContent?.trim()||"第一滴正在靠近",
       milestoneCount:$("milestoneCount")?.textContent?.trim()||"0 / 17",
+      lifeStageKey:lifeStage.key,
+      lifeStageName:lifeStage.name,
       birth
     };
   }
@@ -120,6 +139,63 @@
     c.restore();
   }
 
+  async function loadMascotSprite(){
+    if(!mascotSpritePromise){
+      mascotSpritePromise=fetch("./icons/mascots.svg")
+        .then(response=>{if(!response.ok)throw new Error("Mascot sprite unavailable");return response.text()})
+        .then(text=>new DOMParser().parseFromString(text,"image/svg+xml"));
+    }
+    return mascotSpritePromise;
+  }
+
+  async function getMascotImage(stageKey){
+    if(mascotImageCache.has(stageKey))return mascotImageCache.get(stageKey);
+    const promise=(async()=>{
+      const doc=await loadMascotSprite();
+      const symbol=doc.getElementById(stageKey);
+      if(!symbol)throw new Error("Unknown mascot stage");
+      const defs=doc.querySelector("defs")?.outerHTML||"";
+      const viewBox=symbol.getAttribute("viewBox")||"0 0 240 280";
+      const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">${defs}<g>${symbol.innerHTML}</g></svg>`;
+      const blob=new Blob([svg],{type:"image/svg+xml"});
+      const url=URL.createObjectURL(blob);
+      try{
+        const image=new Image();
+        await new Promise((resolve,reject)=>{
+          image.onload=resolve;
+          image.onerror=()=>reject(new Error("Mascot image decode failed"));
+          image.src=url;
+        });
+        return image;
+      }finally{
+        URL.revokeObjectURL(url);
+      }
+    })();
+    mascotImageCache.set(stageKey,promise);
+    try{return await promise}catch(error){mascotImageCache.delete(stageKey);throw error}
+  }
+
+  async function drawMascot(c,stageKey,x,y,w,h,p){
+    c.save();
+    const cx=x+w/2,cy=y+h*.58;
+    c.strokeStyle=p.accent;c.lineWidth=2;c.globalAlpha=.13;
+    [w*.33,w*.46].forEach(rx=>{
+      c.beginPath();
+      c.ellipse(cx,cy,rx,rx*.34,0,0,Math.PI*2);
+      c.stroke();
+    });
+    c.restore();
+    try{
+      const image=await getMascotImage(stageKey);
+      c.save();
+      c.shadowColor=p.glow;c.shadowBlur=Math.max(18,w*.09);
+      c.drawImage(image,x,y,w,h);
+      c.restore();
+    }catch{
+      drawDrop(c,cx,y+h*.48,Math.min(w,h)*.38,p);
+    }
+  }
+
   function drawSpark(c,cx,cy,size,color){
     c.save();c.translate(cx,cy);c.fillStyle=color;
     c.beginPath();
@@ -173,7 +249,7 @@
     c.fillText("把時間養成一隻寵物",x+58*scale,y+50*scale);
   }
 
-  function renderSquare(s){
+  async function renderSquare(s){
     const w=1080,h=1080,p=palette();
     canvas.width=w;canvas.height=h;background(ctx,w,h,p);
     drawBrand(ctx,72,66,p,1);
@@ -184,7 +260,10 @@
     ctx.fillStyle=p.text;ctx.font="800 "+nameSize+"px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
     ctx.fillText(s.name,72,260);
 
-    drawDrop(ctx,862,248,118,p);
+    await drawMascot(ctx,s.lifeStageKey,790,132,230,268,p);
+    fillRound(ctx,792,374,214,42,21,p.panel,p.line);
+    ctx.textAlign="center";ctx.fillStyle=p.muted;ctx.font="700 16px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
+    ctx.fillText("生命階段 · "+s.lifeStageName,899,401);ctx.textAlign="left";
 
     ctx.fillStyle=p.muted;ctx.font="700 20px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
     ctx.fillText("已陪伴",72,390);
@@ -227,7 +306,7 @@
     ctx.fillText("滴派",1008,986);ctx.textAlign="left";
   }
 
-  function renderStory(s){
+  async function renderStory(s){
     const w=1080,h=1920,p=palette();
     canvas.width=w;canvas.height=h;background(ctx,w,h,p);
     drawBrand(ctx,72,82,p,1.08);
@@ -238,9 +317,10 @@
     ctx.fillStyle=p.text;ctx.font="800 "+nameSize+"px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
     ctx.fillText(s.name,72,350);
 
-    ctx.save();ctx.globalAlpha=.22;ctx.strokeStyle=p.accent;ctx.lineWidth=2;
-    [260,390,520].forEach(r=>{ctx.beginPath();ctx.arc(540,650,r,0,Math.PI*2);ctx.stroke()});ctx.restore();
-    drawDrop(ctx,540,625,200,p);
+    await drawMascot(ctx,s.lifeStageKey,340,420,400,466,p);
+    fillRound(ctx,394,838,292,48,24,p.panel,p.line);
+    ctx.textAlign="center";ctx.fillStyle=p.muted;ctx.font="700 18px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
+    ctx.fillText("生命階段 · "+s.lifeStageName,540,869);ctx.textAlign="left";
 
     ctx.textAlign="center";
     ctx.fillStyle=p.muted;ctx.font="700 24px system-ui, -apple-system, 'Noto Sans TC', sans-serif";
@@ -284,12 +364,21 @@
     ctx.fillText("滴派",1008,1810);ctx.textAlign="left";
   }
 
-  function render(){
+  async function render(){
     currentSnapshot=getSnapshot();
     if(!currentSnapshot)return;
+    const sequence=++renderSequence;
     currentBlob=null;downloadBtn.disabled=true;nativeShareBtn.disabled=true;
-    if(format==="story")renderStory(currentSnapshot);else renderSquare(currentSnapshot);
+    try{
+      if(format==="story")await renderStory(currentSnapshot);else await renderSquare(currentSnapshot);
+    }catch(error){
+      console.error("Share card render failed",error);
+      announce("分享卡預覽產生失敗，請再試一次");
+      return;
+    }
+    if(sequence!==renderSequence)return;
     canvas.toBlob(blob=>{
+      if(sequence!==renderSequence)return;
       currentBlob=blob;
       downloadBtn.disabled=!blob;
       nativeShareBtn.disabled=!blob;
