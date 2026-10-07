@@ -23,6 +23,7 @@
   </script>
   <link rel="stylesheet" href="./styles.css?v=award-v1" />
   <link rel="stylesheet" href="./journey.css?v=journey-v2" />
+  <link rel="stylesheet" href="./share.css?v=share-v1" />
   <style>
     .unlock-toast{position:fixed;z-index:60;left:50%;bottom:max(18px,env(safe-area-inset-bottom));width:min(470px,calc(100vw - 24px));display:grid;grid-template-columns:58px minmax(0,1fr) 34px;align-items:center;gap:12px;padding:13px 13px 13px 14px;border:1px solid var(--stroke-strong);border-radius:22px;background:linear-gradient(145deg,rgba(91,207,255,.09),rgba(139,241,215,.04)),var(--surface-solid);box-shadow:0 24px 70px rgba(0,0,0,.34);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);opacity:0;visibility:hidden;pointer-events:none;transform:translate(-50%,22px) scale(.98);transition:opacity .22s ease,transform .22s ease,visibility .22s ease}
     .unlock-toast.is-visible{opacity:1;visibility:visible;pointer-events:auto;transform:translate(-50%,0) scale(1)}
@@ -102,7 +103,13 @@
           <h2>里程碑</h2>
           <p id="milestoneSummary" class="milestone-summary">旅程會從第一滴開始。</p>
         </div>
-        <span id="milestoneCount" class="milestone-count">0 / 17</span>
+        <div class="milestone-head-actions">
+          <span id="milestoneCount" class="milestone-count">0 / 17</span>
+          <button id="shareAchievementBtn" class="share-entry" type="button" aria-label="分享滴派成就卡" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.9 7.6-4.7M8.2 13.1l7.6 4.7"/></svg>
+            <span>分享</span>
+          </button>
+        </div>
       </div>
 
       <div class="journey-glance" aria-label="里程碑摘要">
@@ -169,6 +176,38 @@
 
   <div id="liveStatus" role="status" aria-live="polite" aria-atomic="true" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0"></div>
 
+  <dialog id="shareDialog" class="share-dialog" aria-labelledby="shareDialogTitle">
+    <div class="share-dialog-card">
+      <header class="share-dialog-head">
+        <div>
+          <span class="dialog-kicker">分享旅程</span>
+          <h2 id="shareDialogTitle">把這段陪伴做成一張卡</h2>
+        </div>
+        <button id="shareCloseBtn" class="share-close" type="button" aria-label="關閉分享成就卡">×</button>
+      </header>
+
+      <div class="share-format-switch" role="group" aria-label="分享圖片尺寸">
+        <button class="share-format-option is-active" type="button" data-share-format="square" aria-pressed="true">
+          <strong>1:1</strong><span>貼文</span>
+        </button>
+        <button class="share-format-option" type="button" data-share-format="story" aria-pressed="false">
+          <strong>9:16</strong><span>限時動態</span>
+        </button>
+      </div>
+
+      <div class="share-preview-shell">
+        <canvas id="shareCanvas" class="share-canvas" width="1080" height="1080" aria-label="成就卡預覽"></canvas>
+      </div>
+
+      <p class="share-note">圖片只在這台裝置上即時產生，不會把滴派資料上傳到伺服器。</p>
+
+      <div class="share-dialog-actions">
+        <button id="downloadShareBtn" class="btn" type="button" disabled>下載 PNG</button>
+        <button id="nativeShareBtn" class="btn primary" type="button" disabled>分享圖片</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog id="renameDialog">
     <form method="dialog" class="dialog-card" id="renameForm">
       <div class="dialog-kicker">改名字</div>
@@ -186,5 +225,6 @@
 
   <script src="./common.js?v=award-v1"></script>
   <script src="./app.js?v=journey-v2"></script>
+  <script src="./share-card.js?v=share-v1"></script>
 </body>
 </html>
