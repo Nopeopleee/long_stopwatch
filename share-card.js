@@ -1,5 +1,7 @@
 (() => {
   const STORAGE_KEY="long-stopwatch-v1";
+  const CARE_DEBUG_KEY="disui-care-debug-v1";
+  const DEBUG_MODE=new URLSearchParams(location.search).get("debug")==="1"||["localhost","127.0.0.1","::1"].includes(location.hostname);
   const $=id=>document.getElementById(id);
   const btn=$("shareAchievementBtn");
   const dialog=$("shareDialog");
@@ -81,7 +83,10 @@
       if(elapsed<candidate.at)break;
       lifeStage=candidate;
     }
-    const careElapsed=Number.isFinite(pet.care?.lastFedAt)?Math.max(0,Date.now()-pet.care.lastFedAt):0;
+    const debugHours=DEBUG_MODE?Number(localStorage.getItem(CARE_DEBUG_KEY)):NaN;
+    const careElapsed=Number.isFinite(debugHours)&&debugHours>=0
+      ? debugHours*60*60*1000
+      : Number.isFinite(pet.care?.lastFedAt)?Math.max(0,Date.now()-pet.care.lastFedAt):0;
     let careStage=careStages[0];
     for(const candidate of careStages){
       if(careElapsed<candidate.at)break;

@@ -1,6 +1,8 @@
 const STORAGE_KEY="long-stopwatch-v1";
 const MILESTONE_SEEN_KEY="dipai-last-seen-milestone-v1";
 const LIFE_STAGE_SEEN_KEY="dipai-last-seen-life-stage-v1";
+const CARE_DEBUG_KEY="disui-care-debug-v1";
+const DEBUG_MODE=new URLSearchParams(location.search).get("debug")==="1"||["localhost","127.0.0.1","::1"].includes(location.hostname);
 const defaultState={name:"我的碼表",startedAt:null,care:null};
 let state=loadState();
 const $=id=>document.getElementById(id);
@@ -19,6 +21,10 @@ const els={
   liveStatus:$("liveStatus"),unlockToast:$("unlockToast"),unlockToastIcon:$("unlockToastIcon"),unlockToastTitle:$("unlockToastTitle"),
   unlockToastMeta:$("unlockToastMeta"),unlockToastDismiss:$("unlockToastDismiss")
 };
+if(DEBUG_MODE){
+  const settingsLink=document.querySelector('a.icon-link[href="./settings.html"]');
+  if(settingsLink)settingsLink.href="./settings.html?debug=1";
+}
 const HOUR=60*60*1000,DAY=24*HOUR;
 const CARE_COOLDOWN=12*HOUR;
 const CARE_DEATH_ENABLED=false;
@@ -183,7 +189,14 @@ function careStatusForElapsed(elapsed){
   if(!CARE_DEATH_ENABLED&&status.key==="dead")return careStatusDefs[5];
   return status;
 }
+function getCareDebugHours(){
+  if(!DEBUG_MODE)return null;
+  const value=Number(localStorage.getItem(CARE_DEBUG_KEY));
+  return Number.isFinite(value)&&value>=0?value:null;
+}
 function getCareElapsed(now=Date.now()){
+  const debugHours=getCareDebugHours();
+  if(debugHours!==null)return debugHours*HOUR;
   return state.care?Math.max(0,now-state.care.lastFedAt):0;
 }
 function careHintFor(status,elapsed){
@@ -266,11 +279,15 @@ function updateCareUI(now=Date.now(),{announceChange=false}={}){
   }
   const elapsed=getCareElapsed(now);
   const status=careStatusForElapsed(elapsed);
+  const debugActive=getCareDebugHours()!==null;
   const previous=lastCareStatusKey;
   lastCareStatusKey=status.key;
   if(els.careStrip)els.careStrip.hidden=false;
-  if(els.careHint)els.careHint.textContent=careHintFor(status,elapsed);
-  if(els.careFeedCount)els.careFeedCount.textContent=`有效餵食 ${state.care.feedCount.toLocaleString()} 次`;
+  if(els.careHint)els.careHint.textContent=(debugActive?"[測試] ":"")+careHintFor(status,elapsed);
+  if(els.careFeedCount)els.careFeedCount.textContent=debugActive
+    ?`測試模式・真實有效餵食 ${state.care.feedCount.toLocaleString()} 次`
+    :`有效餵食 ${state.care.feedCount.toLocaleString()} 次`;
+  document.body.classList.toggle("care-debug-active",debugActive);
   if(els.feedBtn&&els.feedBtnLabel){
     const remaining=Math.max(0,CARE_COOLDOWN-elapsed);
     const ready=remaining<=0;
@@ -295,6 +312,15 @@ function feedPet(){
     if(els.careHint)els.careHint.textContent=`現在還很飽・${formatCareRemaining(remaining)}後再餵就好`;
     announce(`滴歲現在還很飽，${formatCareRemaining(remaining)}後再餵`);
     if(navigator.vibrate)navigator.vibrate(18);
+    return;
+  }
+  if(DEBUG_MODE&&getCareDebugHours()!==null){
+    localStorage.setItem(CARE_DEBUG_KEY,"0");
+    updateCareUI(now);
+    pulseMascot("is-fed",1050);
+    if(els.careHint)els.careHint.textContent="[測試] 餵食成功，已模擬恢復健康；真實資料沒有變更。";
+    announce("測試模式：餵食後已恢復健康，真實餵食資料沒有變更");
+    if(navigator.vibrate)navigator.vibrate([35,35,65]);
     return;
   }
   state={

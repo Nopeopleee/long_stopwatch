@@ -8,8 +8,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="manifest" href="./manifest.webmanifest" />
-  <link rel="icon" href="./icons/icon-192.webp" type="image/webp" />
-  <link rel="apple-touch-icon" href="./icons/icon-192.webp" />
+  <link rel="icon" href="./icons/icon-192.webp?v=icon-v2" type="image/webp" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.webp?v=icon-v2" />
   <script>
     (() => {
       try {
@@ -102,6 +102,65 @@
       </div>
     </section>
 
+    <section id="debugSection" class="settings-section" aria-labelledby="debugTitle" hidden>
+      <h2 id="debugTitle" class="settings-section-title">測試工具</h2>
+      <div class="settings-list">
+        <div class="settings-row">
+          <div class="settings-icon settings-icon-accent" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v5l-5 9a2.5 2.5 0 0 0 2.2 3.7h9.6A2.5 2.5 0 0 0 19 17l-5-9V3M8 14h8"/></svg>
+          </div>
+          <div class="settings-copy">
+            <strong>模擬照顧時間</strong>
+            <span id="debugCareStatus">尚未套用模擬</span>
+          </div>
+          <select id="debugCareSelect" class="settings-select" aria-label="模擬距離上次餵食多久">
+            <option value="0">0h · 剛餵完</option>
+            <option value="12">12h · 可餵食</option>
+            <option value="24">24h · 有點餓</option>
+            <option value="48">48h · 飢餓</option>
+            <option value="72">72h · 虛弱</option>
+            <option value="96">96h · 生病</option>
+            <option value="144">144h · 危急</option>
+            <option value="192">192h · 超過死亡門檻</option>
+          </select>
+        </div>
+
+        <button id="applyCareDebugBtn" type="button" class="settings-row settings-action">
+          <span class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>套用模擬</strong>
+            <span>只覆蓋照顧狀態判斷，不改真正的出生與餵食資料</span>
+          </span>
+          <span class="settings-chevron" aria-hidden="true">›</span>
+        </button>
+
+        <button id="clearCareDebugBtn" type="button" class="settings-row settings-action">
+          <span class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6M4 4v4.6h4.6"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>恢復真實狀態</strong>
+            <span>清除測試覆蓋，回到真正的 lastFedAt</span>
+          </span>
+          <span class="settings-chevron" aria-hidden="true">›</span>
+        </button>
+
+        <a id="debugHomeLink" class="settings-row settings-action" href="./?debug=1">
+          <span class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5M5.5 10v10h13V10M9.5 20v-6h5v6"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>回首頁查看</strong>
+            <span>保持測試模式，直接檢查角色、餵食與分享卡</span>
+          </span>
+          <span class="settings-chevron" aria-hidden="true">›</span>
+        </a>
+      </div>
+      <p class="settings-footnote">測試模式只會在網址帶 <code>?debug=1</code> 或 localhost 時出現；模擬值本身不會寫進備份。</p>
+    </section>
+
     <section class="settings-section danger-settings" aria-labelledby="dangerTitle">
       <h2 id="dangerTitle" class="settings-section-title">危險區</h2>
       <div class="settings-list danger-list">
@@ -123,6 +182,6 @@
   </main>
 
   <script src="./common.js?v=award-v1"></script>
-  <script src="./settings.js?v=care-v1"></script>
+  <script src="./settings.js?v=debug-v1"></script>
 </body>
 </html>
