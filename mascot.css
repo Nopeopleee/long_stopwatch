@@ -36,3 +36,97 @@
 @media(max-width:700px){.mascot-stage-shell{width:205px;height:240px;transform:translate(-50%,-56%)}.life-stage-chip{margin-top:14px}}
 @media(max-width:390px){.mascot-stage-shell{width:184px;height:216px}.life-stage-chip{margin-top:12px;padding:6px 9px}.evolution-card{padding:20px 18px 24px;border-radius:25px}.evolution-mascot-wrap{width:165px;height:192px}}
 @media(prefers-reduced-motion:reduce){.mascot-stage,.mascot-aura,.mascot-stage-shell.is-evolving .mascot-stage,.mascot-stage-shell.is-evolving::after,.evolution-rings span,.evolution-mascot-wrap svg{animation:none!important}}
+
+
+/* v2 layout: mascot and elapsed time each get their own visual lane instead of overlapping. */
+.time-stage{
+  grid-template-columns:minmax(240px,.92fr) minmax(0,1.08fr);
+  align-items:center;
+  column-gap:28px;
+  min-height:390px;
+  padding:12px 8px 8px;
+}
+.time-stage .mascot-stage-shell{
+  position:relative;
+  left:auto;
+  top:auto;
+  grid-column:1;
+  grid-row:1;
+  align-self:center;
+  justify-self:center;
+  transform:none;
+}
+.time-stage .elapsed-wrap{
+  grid-column:2;
+  grid-row:1;
+  width:100%;
+  min-width:0;
+  text-align:left;
+  justify-self:stretch;
+}
+.time-stage .days-row{justify-content:flex-start}
+.time-stage .life-stage-chip{margin-left:0;margin-right:0}
+.time-stage .ripple{
+  left:26.5%;
+  top:50%;
+}
+.time-stage .ripple-one{width:250px;height:250px}
+.time-stage .ripple-two{width:330px;height:330px}
+.time-stage .ripple-three{width:410px;height:410px}
+.time-stage .days{
+  font-size:clamp(6.6rem,15vw,10.5rem);
+}
+.time-stage .clock-row{
+  font-size:clamp(1.65rem,4.4vw,2.75rem);
+}
+
+@media(max-width:700px){
+  .time-stage{
+    grid-template-columns:minmax(118px,.82fr) minmax(0,1.18fr);
+    column-gap:10px;
+    min-height:300px;
+    padding:8px 0 4px;
+  }
+  .time-stage .mascot-stage-shell{
+    width:158px;
+    height:186px;
+    transform:none;
+  }
+  .time-stage .ripple{left:23%}
+  .time-stage .ripple-one{width:170px;height:170px}
+  .time-stage .ripple-two{width:220px;height:220px}
+  .time-stage .ripple-three{width:275px;height:275px}
+  .time-stage .days{
+    font-size:clamp(4.7rem,22vw,7.2rem);
+    letter-spacing:-.07em;
+  }
+  .time-stage .unit{
+    font-size:.95rem;
+  }
+  .time-stage .clock-row{
+    margin-top:15px;
+    font-size:clamp(1.25rem,5.8vw,1.85rem);
+    letter-spacing:.07em;
+    white-space:nowrap;
+  }
+  .time-stage .life-stage-chip{
+    margin-top:12px;
+    padding:6px 9px;
+  }
+}
+@media(max-width:390px){
+  .time-stage{
+    grid-template-columns:112px minmax(0,1fr);
+    column-gap:6px;
+    min-height:275px;
+  }
+  .time-stage .mascot-stage-shell{width:138px;height:162px}
+  .time-stage .ripple{left:20%}
+  .time-stage .ripple-one{width:145px;height:145px}
+  .time-stage .ripple-two{width:190px;height:190px}
+  .time-stage .ripple-three{width:235px;height:235px}
+  .time-stage .days{font-size:clamp(4.25rem,20vw,5.6rem)}
+  .time-stage .clock-row{font-size:1.16rem;letter-spacing:.045em}
+  .time-stage .life-stage-chip{font-size:.62rem;gap:5px;padding:5px 7px}
+  .time-stage .life-stage-chip strong{font-size:.66rem}
+}

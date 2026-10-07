@@ -1,4 +1,4 @@
-const CACHE="dipai-v15";
+const CACHE="dipai-v16";
 const PRECACHE=[
   "./",
   "./index.html",
@@ -6,7 +6,7 @@ const PRECACHE=[
   "./styles.css?v=award-v1",
   "./journey.css?v=journey-v2",
   "./share.css?v=share-v1",
-  "./mascot.css?v=growth-v1",
+  "./mascot.css?v=growth-v2",
   "./common.js?v=award-v1",
   "./app.js?v=growth-v1",
   "./share-card.js?v=share-v2",
