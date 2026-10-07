@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta id="themeColorMeta" name="theme-color" content="#071018" />
-  <meta name="description" content="滴派：把時間養成一隻會一直長大的碼表寵物。" />
+  <meta name="description" content="滴歲：把時間養成一隻會一直長大的碼表寵物。" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="manifest" href="./manifest.webmanifest" />
@@ -34,17 +34,17 @@
     .unlock-toast-dismiss{width:32px;height:32px;border:0;border-radius:11px;background:transparent;color:var(--muted);font-size:1.35rem;line-height:1;cursor:pointer}.unlock-toast-dismiss:hover{background:var(--soft);color:var(--text)}
     @media(max-width:420px){.unlock-toast{grid-template-columns:50px minmax(0,1fr) 30px;padding:11px;border-radius:19px}.unlock-toast-icon{width:48px;height:48px;border-radius:15px}.unlock-toast-icon svg{width:44px;height:44px}}
   </style>
-  <title>滴派</title>
+  <title>滴歲</title>
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span></span><span></span><span></span></div>
 
   <main class="app-shell">
     <header class="topbar home-topbar">
-      <div class="brand-wrap" aria-label="滴派">
+      <div class="brand-wrap" aria-label="滴歲">
         <span class="brand-drop" aria-hidden="true"></span>
         <div>
-          <div class="brand">滴派</div>
+          <div class="brand">滴歲</div>
           <div class="brand-note">把時間養成一隻寵物</div>
         </div>
       </div>
@@ -116,7 +116,7 @@
         </div>
         <div class="milestone-head-actions">
           <span id="milestoneCount" class="milestone-count">0 / 17</span>
-          <button id="shareAchievementBtn" class="share-entry" type="button" aria-label="分享滴派成就卡" hidden>
+          <button id="shareAchievementBtn" class="share-entry" type="button" aria-label="分享滴歲成就卡" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.9 7.6-4.7M8.2 13.1l7.6 4.7"/></svg>
             <span>分享</span>
           </button>
@@ -185,14 +185,14 @@
     <button id="unlockToastDismiss" class="unlock-toast-dismiss" type="button" aria-label="關閉里程碑通知">×</button>
   </aside>
 
-  <aside id="evolutionOverlay" class="evolution-overlay" aria-label="滴派成長" hidden>
+  <aside id="evolutionOverlay" class="evolution-overlay" aria-label="滴歲成長" hidden>
     <div class="evolution-rings" aria-hidden="true"><span></span><span></span><span></span></div>
     <div class="evolution-card">
       <button id="evolutionDismiss" class="evolution-dismiss" type="button" aria-label="關閉成長通知">×</button>
       <div class="evolution-mascot-wrap" aria-hidden="true">
         <svg viewBox="0 0 240 280"><use id="evolutionMascotUse" href="./icons/mascots.svg#baby"></use></svg>
       </div>
-      <span class="evolution-kicker">滴派長大了</span>
+      <span class="evolution-kicker">滴歲長大了</span>
       <strong id="evolutionStageTitle">幼滴</strong>
       <small id="evolutionStageMeta">新的生命階段已解鎖</small>
     </div>
@@ -223,7 +223,7 @@
         <canvas id="shareCanvas" class="share-canvas" width="1080" height="1080" aria-label="成就卡預覽"></canvas>
       </div>
 
-      <p class="share-note">圖片只在這台裝置上即時產生，不會把滴派資料上傳到伺服器。</p>
+      <p class="share-note">圖片只在這台裝置上即時產生，不會把滴歲資料上傳到伺服器。</p>
 
       <div class="share-dialog-actions">
         <button id="downloadShareBtn" class="btn" type="button" disabled>下載 PNG</button>
@@ -235,7 +235,7 @@
   <dialog id="renameDialog">
     <form method="dialog" class="dialog-card" id="renameForm">
       <div class="dialog-kicker">改名字</div>
-      <h2>這隻滴派要叫什麼？</h2>
+      <h2>這隻滴歲要叫什麼？</h2>
       <label>
         寵物名
         <input id="renameInput" maxlength="32" placeholder="我的碼表" autocomplete="off" />
@@ -248,7 +248,7 @@
   </dialog>
 
   <script src="./common.js?v=award-v1"></script>
-  <script src="./app.js?v=growth-v1"></script>
-  <script src="./share-card.js?v=share-v3"></script>
+  <script src="./app.js?v=brand-v1"></script>
+  <script src="./share-card.js?v=brand-v1"></script>
 </body>
 </html>
