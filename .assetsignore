@@ -1,0 +1,20 @@
+# The repository root is temporarily used as the Static Assets directory.
+# Publish only files needed by the current PWA; do not expose Git metadata,
+# Wrangler configuration, documentation, or future backend source files.
+# When adding a new public asset, remember to allow it here.
+*
+!index.html
+!settings.html
+!manifest.webmanifest
+!styles.css
+!journey.css
+!share.css
+!mascot.css
+!common.js
+!storage.js
+!app.js
+!share-card.js
+!settings.js
+!sw.js
+!icons/
+!icons/**

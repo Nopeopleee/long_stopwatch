@@ -1,0 +1,8 @@
+{
+  "name": "disui",
+  "compatibility_date": "2026-10-08",
+  "assets": {
+    "directory": "./",
+    "html_handling": "none"
+  }
+}
