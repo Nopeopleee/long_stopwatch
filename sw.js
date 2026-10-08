@@ -1,15 +1,16 @@
-const CACHE="disui-v24";
+const CACHE="disui-v25";
+const LEGACY_STATIC_HOST=self.location.hostname.endsWith(".github.io")||["localhost","127.0.0.1","::1"].includes(self.location.hostname);
+const SETTINGS_PAGE=LEGACY_STATIC_HOST?"./settings.html":"./settings";
 const PRECACHE=[
   "./",
-  "./index.html",
-  "./settings.html",
+  SETTINGS_PAGE,
   "./styles.css?v=storage-v1",
   "./journey.css?v=journey-v2",
   "./share.css?v=share-v1",
   "./mascot.css?v=care-v2",
   "./common.js?v=award-v1",
   "./storage.js?v=storage-v1",
-  "./app.js?v=storage-v1",
+  "./app.js?v=routes-v1",
   "./share-card.js?v=debug-v2",
   "./settings.js?v=storage-v1",
   "./manifest.webmanifest",
@@ -50,7 +51,7 @@ async function networkFirst(request){
     if(cached)return cached;
     if(request.mode==="navigate"){
       const url=new URL(request.url);
-      const fallback=url.pathname.endsWith("/settings.html")?"./settings.html":"./index.html";
+      const fallback=/\/settings(?:\.html)?\/?$/.test(url.pathname)?SETTINGS_PAGE:"./";
       const page=await caches.match(fallback);
       if(page)return page;
     }

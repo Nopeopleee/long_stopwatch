@@ -65,7 +65,7 @@ python -m http.server 8080
 npx serve . -l 8080
 ```
 
-再開啟 `http://localhost:8080/`。
+再開啟 `http://localhost:8080/`。本機與 GitHub Pages 的設定頁仍使用 `settings.html`；Cloudflare Workers 的正式網址使用 `/settings`，舊 `/settings.html` 會轉址至乾淨網址。
 
 ### 照顧狀態測試
 

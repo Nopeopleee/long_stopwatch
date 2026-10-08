@@ -23,10 +23,14 @@ const els={
   backupReminder:$("backupReminder"),backupReminderTitle:$("backupReminderTitle"),backupReminderText:$("backupReminderText"),
   backupReminderDismiss:$("backupReminderDismiss"),backupReminderAction:$("backupReminderAction")
 };
-if(DEBUG_MODE){
-  const settingsLink=document.querySelector('a.icon-link[href="./settings.html"]');
-  if(settingsLink)settingsLink.href="./settings.html?debug=1";
-}
+// Cloudflare serves the canonical /settings route; GitHub Pages and local static
+// servers still require settings.html. Keep the legacy href as an HTML fallback.
+const USE_CLEAN_URLS=!location.hostname.endsWith(".github.io")&&!["localhost","127.0.0.1","::1"].includes(location.hostname);
+const settingsPath=USE_CLEAN_URLS?"./settings":"./settings.html";
+const settingsQuery=DEBUG_MODE?"?debug=1":"";
+const settingsLink=document.querySelector('a.icon-link[aria-label="設定"]');
+if(settingsLink)settingsLink.href=settingsPath+settingsQuery;
+if(els.backupReminderAction)els.backupReminderAction.href=settingsPath+settingsQuery+"#data-safety";
 const HOUR=60*60*1000,DAY=24*HOUR;
 const CARE_COOLDOWN=12*HOUR;
 const CARE_DEATH_ENABLED=false;
@@ -544,7 +548,6 @@ function updateBackupReminder(){
   els.backupReminderText.textContent=age>=90*DAY
     ?`已經 ${days.toLocaleString()} 天沒有匯出 JSON。IndexedDB 副本無法抵抗清除網站資料。`
     :`距離上次外部備份約 ${days.toLocaleString()} 天；有空時匯出一份 JSON 會更安心。`;
-  if(DEBUG_MODE&&els.backupReminderAction)els.backupReminderAction.href="./settings.html?debug=1#data-safety";
   els.backupReminder.hidden=false;
 }
 async function reconcileStorageSafety({rerender=true}={}){
