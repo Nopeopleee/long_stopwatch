@@ -1,0 +1,30 @@
+name: Verify JavaScript and D1 account APIs
+
+on:
+  push:
+    branches: [main, feat/account-auth]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  node-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Syntax checks
+        run: |
+          node --check src/worker.js
+          node --check src/auth.js
+          node --check src/account-pets.js
+          node --check account.js
+          node --check account-ui.js
+          node --check app.js
+          node --check settings.js
+          node --check cloud.js
+      - name: Unit and SQLite integration tests
+        run: node --test tests/*.test.mjs
