@@ -28,7 +28,7 @@ function validName(value) {
     value.trim() === value &&
     [...value].length >= 1 &&
     [...value].length <= 32 &&
-    !/[\\u0000-\\u001f\\u007f]/.test(value);
+    !/[\u0000-\u001f\u007f]/.test(value);
 }
 
 function publicPet(row) {
@@ -52,7 +52,7 @@ function bearerToken(request) {
 
 async function createPet(request, db) {
   const type = request.headers.get("Content-Type") || "";
-  if (!/^application\\/json(?:\\s*;|\\s*$)/i.test(type)) {
+  if (!/^application\/json(?:\s*;|\s*$)/i.test(type)) {
     return json({ error: "Content-Type must be application/json" }, 415);
   }
   // Bounded input so malformed or oversized requests cannot exhaust the Worker.
@@ -127,7 +127,7 @@ export default {
       }
     }
 
-    const petId = /^\\/api\\/pets\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(pathname)?.[1];
+    const petId = /^\/api\/pets\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(pathname)?.[1];
     const collection = pathname === "/api/pets";
     if (!collection && !petId) return json({ error: "Not found" }, 404);
     const allow = collection ? "POST" : "GET";
