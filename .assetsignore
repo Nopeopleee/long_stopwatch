@@ -13,6 +13,7 @@
 !common.js
 !storage.js
 !app.js
+!cloud.js
 !share-card.js
 !settings.js
 !sw.js
