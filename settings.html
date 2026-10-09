@@ -86,6 +86,23 @@
       </div>
     </section>
 
+    <section class="settings-section" aria-labelledby="cloudTitle">
+      <h2 id="cloudTitle" class="settings-section-title">雲端備份（手動啟用）</h2>
+      <div class="settings-list">
+        <div class="settings-row">
+          <span class="settings-copy">
+            <strong>雲端連線</strong>
+            <span id="cloudStatus" role="status">尚未綁定；既有寵物不會自動上傳</span>
+          </span>
+        </div>
+        <button id="cloudBindBtn" type="button" class="settings-row settings-action"><span class="settings-copy"><strong>將目前滴歲綁定雲端</strong><span>保留原始出生時間，先建立遠端副本</span></span></button>
+        <button id="cloudRestoreBtn" type="button" class="settings-row settings-action"><span class="settings-copy"><strong>使用 ID 與密鑰還原</strong><span>換裝置時從雲端讀回資料</span></span></button>
+        <button id="cloudCopyBtn" type="button" class="settings-row settings-action"><span class="settings-copy"><strong>複製還原資訊</strong><span>包含私密密鑰，請存放在安全位置</span></span></button>
+        <button id="cloudRotateBtn" type="button" class="settings-row settings-action"><span class="settings-copy"><strong>輪替雲端密鑰</strong><span>舊密鑰會立即失效</span></span></button>
+      </div>
+      <p class="settings-footnote">目前使用持有者密鑰，不是帳號登入。若密鑰與本機資料同時遺失，無法還原。雲端餵食需網路連線；綁定後本機餵食不再離線計數。</p>
+    </section>
+
     <section id="data-safety" class="settings-section" aria-labelledby="safetyTitle">
       <h2 id="safetyTitle" class="settings-section-title">資料安全</h2>
       <div class="settings-list safety-list">
@@ -264,6 +281,7 @@
 
   <script src="./common.js?v=award-v1"></script>
   <script src="./storage.js?v=storage-v1"></script>
-  <script src="./settings.js?v=storage-v1"></script>
+  <script src="./cloud.js?v=cloud-v1"></script>
+  <script src="./settings.js?v=cloud-v1"></script>
 </body>
 </html>
