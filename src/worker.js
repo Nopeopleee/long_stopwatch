@@ -1,3 +1,5 @@
+import { handleAuth } from "./auth.js";
+import { handleAccountPet } from "./account-pets.js";
 // Only /api/* is dispatched to this Worker before Cloudflare static assets.
 function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
@@ -189,6 +191,11 @@ export default {
     const { pathname } = new URL(request.url);
     if (pathname !== "/api" && !pathname.startsWith("/api/")) {
       return env.ASSETS.fetch(request);
+    }
+
+    if (pathname.startsWith("/api/auth/")) return handleAuth(request, env, pathname);
+    if (pathname === "/api/me/pet" || pathname.startsWith("/api/me/pet/")) {
+      return handleAccountPet(request, env, pathname);
     }
 
     if (pathname === "/api/health") {

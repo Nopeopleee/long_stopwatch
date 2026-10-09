@@ -111,5 +111,5 @@
       diedAt: pet.diedAt
     } };
   }
-  window.DisuiCloud = { supported, binding, disconnect, active, connectLocal, restore, read, feed, rotate, applyCare };
+  window.DisuiCloud = { supported, binding, disconnect, active, asLocal, connectLocal, restore, read, feed, rotate, applyCare };
 })();
