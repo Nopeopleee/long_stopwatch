@@ -92,8 +92,8 @@ npx serve . -l 8080
 
 目前 `disui.noppl.cc` 預計由 Cloudflare Workers + Static Assets 提供前端，`/api/*` 走 Worker；其他網站資源仍由靜態資產層處理。設定放在 `wrangler.jsonc`：
 
-- `src/worker.js`：目前只提供唯讀 `GET /api/health`，驗證 D1 連線與初始資料表是否建立。其他 `/api/*` 回傳 404。
-- `migrations/0001_create_pets.sql`：第一份寵物資料表 migration；目前**尚未提供建立／讀取／同步寵物的 API**，也不會自動上傳本機寵物資料。
+- `src/worker.js`：提供唯讀 `GET /api/health`，以及 `POST /api/pets` 建立原生寵物、`GET /api/pets/:id` 透過 Bearer Owner Token 讀取寵物。其他 `/api/*` 回傳 404。
+- `migrations/0001_create_pets.sql`：第一份寵物資料表 migration；已支援建立與授權讀取原生寵物，但尚未有餵食、修改與同步 API；前端不會自動上傳本機寵物資料。
 - D1 binding 名稱為 `DB`，對應資料庫 `disui-db`。前端與 Server Worker 程式碼分開，API 不會由 Service Worker 快取。
 
 ### 初始化 D1 schema（需要 Cloudflare 授權）
@@ -135,3 +135,23 @@ GitHub 的 Worker Builds 繼續使用 `npx wrangler deploy` 部署程式。部�
 - **照顧系統仍在調整**：已有餵食與健康狀態，但死亡、治療、復活及假期模式尚未實作。
 
 希望先把「自己養一隻滴歲」做好，再慢慢把牠帶到雲端。
+
+
+### 寵物 API（後端基礎）
+
+目前只有手動呼叫 API，**前端尚未接入，也沒有跨裝置同步**。
+
+```bash
+curl -X POST https://disui.noppl.cc/api/pets \\
+  -H 'Content-Type: application/json' \\
+  -d '{"name":"我的滴歲"}'
+```
+
+成功回傳 HTTP 201：`{"pet":{...},"ownerToken":"<64位十六進位密鑰>"}`。請將 `ownerToken` 保存在安全位置，**只會在建立時回傳一次，伺服器只存 SHA-256 Hash**。Token 遺失目前無法復原；切勿貼在公開網址、Git、分享卡或日誌中。
+
+```bash
+curl https://disui.noppl.cc/api/pets/你的寵物UUID \\
+  -H 'Authorization: Bearer 你的ownerToken'
+```
+
+有效 Token 才能取得寵物資料；缺少 Token 回傳 401，不匹配回傳 404。目前 **尚未提供帳號、Token 輪替、移轉／恢復及速率限制**，請勿把它視為完整正式帳號系統。公開啟用建立 API 前建議先加 Cloudflare WAF / Rate Limiting 防止惡意大量建立紀錄。
