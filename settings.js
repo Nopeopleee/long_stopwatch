@@ -233,6 +233,7 @@ const cloudBindBtn=document.getElementById("cloudBindBtn");
 const cloudRestoreBtn=document.getElementById("cloudRestoreBtn");
 const cloudCopyBtn=document.getElementById("cloudCopyBtn");
 const cloudRotateBtn=document.getElementById("cloudRotateBtn");
+const cloudDisconnectBtn=document.getElementById("cloudDisconnectBtn");
 function updateCloudStatus(){
   const binding=window.DisuiCloud?.binding();
   const state=loadState();
@@ -245,6 +246,7 @@ function updateCloudStatus(){
   if(cloudBindBtn)cloudBindBtn.disabled=!window.DisuiCloud?.supported()||!!binding||!state.startedAt;
   if(cloudCopyBtn)cloudCopyBtn.disabled=!matched;
   if(cloudRotateBtn)cloudRotateBtn.disabled=!matched;
+  if(cloudDisconnectBtn)cloudDisconnectBtn.disabled=!binding;
 }
 cloudBindBtn?.addEventListener("click",async()=>{
   const state=loadState();
@@ -294,3 +296,10 @@ cloudRotateBtn?.addEventListener("click",async()=>{
   }catch(error){alert(`密鑰輪替失敗：${error.message}`)}
 });
 updateCloudStatus();
+
+cloudDisconnectBtn?.addEventListener("click",()=>{
+  if(!DisuiCloud.binding())return;
+  if(!confirm("解除雲端綁定後將改為本機餵食。遠端資料不會被刪除。請確認已備份寵物 ID 與密鑰。"))return;
+  DisuiCloud.disconnect();
+  updateCloudStatus();
+});
