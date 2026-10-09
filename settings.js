@@ -225,3 +225,72 @@ if("serviceWorker" in navigator){
   window.addEventListener("load",async()=>{try{registration=await navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"});await registration.update()}catch(err){console.error("Service worker registration/update failed",err)}});
   document.addEventListener("visibilitychange",()=>{if(!document.hidden){registration?.update().catch(()=>{});reconcileStorageSafety().then(refreshSafetyStatus)}});
 }
+
+
+// Manual cloud enrollment; do not upload or replace local data on page load.
+const cloudStatus=document.getElementById("cloudStatus");
+const cloudBindBtn=document.getElementById("cloudBindBtn");
+const cloudRestoreBtn=document.getElementById("cloudRestoreBtn");
+const cloudCopyBtn=document.getElementById("cloudCopyBtn");
+const cloudRotateBtn=document.getElementById("cloudRotateBtn");
+function updateCloudStatus(){
+  const binding=window.DisuiCloud?.binding();
+  const state=loadState();
+  const matched=window.DisuiCloud?.active(state);
+  if(cloudStatus)cloudStatus.textContent=!window.DisuiCloud?.supported()
+    ?"目前網址不支援雲端 API，請使用正式網站"
+    :matched?`已綁定：${binding.id}（雲端餵食）`
+    :binding?"這個瀏覽器綁定了另一隻滴歲，請先確認本機資料"
+    :"尚未綁定；既有寵物不會自動上傳";
+  if(cloudBindBtn)cloudBindBtn.disabled=!window.DisuiCloud?.supported()||!!binding||!state.startedAt;
+  if(cloudCopyBtn)cloudCopyBtn.disabled=!matched;
+  if(cloudRotateBtn)cloudRotateBtn.disabled=!matched;
+}
+cloudBindBtn?.addEventListener("click",async()=>{
+  const state=loadState();
+  if(!confirm("將目前滴歲的名稱、出生時間與餵食紀錄上傳到 D1？出生時間會標記為舊資料，不作為可信排行依據。"))return;
+  cloudBindBtn.disabled=true;
+  try{
+    if(window.DisuiStorage)await DisuiStorage.createSnapshot(state,"before-cloud-bind",{force:true});
+    const data=await DisuiCloud.connectLocal(state);
+    alert("已綁定雲端！請立即複製並妥善保存還原資訊。雲端同步從現在開始生效。");
+    updateCloudStatus();
+  }catch(error){alert(`雲端綁定失敗：${error.message}`);updateCloudStatus()}
+});
+cloudRestoreBtn?.addEventListener("click",async()=>{
+  if(!window.DisuiCloud?.supported()){alert("請在正式網站操作");return}
+  const id=prompt("請貼上寵物 ID（UUID）");
+  if(!id)return;
+  const token=prompt("請貼上 64 位十六進位還原密鑰（不要與任何人分享）");
+  if(!token)return;
+  try{
+    const restore=await DisuiCloud.restore(id,token);
+    const previous=loadState();
+    if(previous.startedAt&&!confirm("此操作會用雲端寵物取代目前畫面上的本機寵物。原本資料將先建立本機快照，確定繼續嗎？"))return;
+    if(window.DisuiStorage&&previous.startedAt)await DisuiStorage.createSnapshot(previous,"before-cloud-restore",{force:true});
+    saveState(restore.state);
+    restore.bind();
+    localStorage.removeItem(CARE_DEBUG_KEY);
+    alert("雲端還原完成！即將返回首頁。");
+    location.href="./";
+  }catch(error){alert(`還原失敗：${error.message}`)}
+});
+cloudCopyBtn?.addEventListener("click",async()=>{
+  const state=loadState();
+  const b=DisuiCloud.active(state);
+  if(!b)return;
+  try{
+    await navigator.clipboard.writeText(`滴歲雲端還原資訊\\nID: ${b.id}\\n密鑰: ${b.token}`);
+    alert("還原資訊已複製，請存到密碼管理器或安全的離線位置。");
+  }catch{alert("複製失敗；瀏覽器可能不允許存取剪貼簿")}
+});
+cloudRotateBtn?.addEventListener("click",async()=>{
+  const state=loadState();
+  if(!confirm("確定輪替密鑰？舊密鑰會失效，其他裝置也會需要更新。請在輪替後立即保存新密鑰。"))return;
+  try{
+    await DisuiCloud.rotate(state);
+    updateCloudStatus();
+    alert("密鑰已輪替，請立即使用「複製還原資訊」備份新的密鑰。");
+  }catch(error){alert(`密鑰輪替失敗：${error.message}`)}
+});
+updateCloudStatus();
