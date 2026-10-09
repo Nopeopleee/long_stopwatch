@@ -312,7 +312,7 @@ function updateCareUI(now=Date.now(),{announceChange=false}={}){
   document.body.dataset.careStatus=status.key;
   if(announceChange&&previous&&previous!==status.key)announce(`滴歲的照顧狀態變成${status.name}`);
 }
-function feedPet(){
+async function feedPet(){
   if(!state.startedAt||!state.care)return;
   const now=Date.now();
   const elapsed=getCareElapsed(now);
@@ -331,6 +331,29 @@ function feedPet(){
     if(els.careHint)els.careHint.textContent="[測試] 餵食成功，已模擬恢復健康；真實資料沒有變更。";
     announce("測試模式：餵食後已恢復健康，真實餵食資料沒有變更");
     if(navigator.vibrate)navigator.vibrate([35,35,65]);
+    return;
+  }
+  if(window.DisuiCloud?.active(state)){
+    if(els.feedBtn.disabled)return;
+    els.feedBtn.disabled=true;
+    try{
+      const pet=await DisuiCloud.feed(state);
+      state=DisuiCloud.applyCare(state,pet);
+      saveState();
+      updateCareUI();
+      pulseMascot("is-fed",1050);
+      announce(`滴歲吃飽了，累積有效餵食 ${state.care.feedCount} 次`);
+    }catch(error){
+      // 409 is a server-authoritative cooldown; update local state from the response.
+      if(error.status===409&&error.response?.pet){
+        state=DisuiCloud.applyCare(state,error.response.pet);
+        saveState();
+        updateCareUI();
+        announce("雲端顯示滴歲還很飽，稍後再餵食");
+      }else{
+        alert("雲端餵食失敗；本機紀錄沒有更動，請確認網路連線後重試。");
+      }
+    }finally{els.feedBtn.disabled=false}
     return;
   }
   state={
@@ -576,6 +599,24 @@ async function reconcileStorageSafety({rerender=true}={}){
     updateBackupReminder();
   }
 }
+
+async function refreshCloudCare(){
+  if(!window.DisuiCloud?.active(state)||document.hidden)return;
+  const expectedStartedAt=state.startedAt;
+  try{
+    const pet=await DisuiCloud.read(state);
+    if(!pet||state.startedAt!==expectedStartedAt)return;
+    const next=DisuiCloud.applyCare(state,pet);
+    if(JSON.stringify(next.care)!==JSON.stringify(state.care)){
+      state=next;
+      saveState();
+      updateCareUI();
+    }
+  }catch(error){
+    console.warn("Cloud care refresh skipped (local data preserved)",error);
+  }
+}
+
 function toggleMilestoneArchive(){
   if(!els.milestoneArchive||!els.milestoneToggle)return;
   const willOpen=els.milestoneArchive.hidden;
@@ -620,7 +661,7 @@ els.backupReminderDismiss?.addEventListener("click",()=>{
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden){stopUiTimers();return}
   state=loadState();previousDoneCount=null;lastMilestoneCount=null;lastLifeStageIndex=null;lastCareStatusKey=null;
-  renderPetState();surfaceMissedMilestones();surfaceMissedLifeStage();startUiTimers();reconcileStorageSafety({rerender:false});
+  renderPetState();surfaceMissedMilestones();surfaceMissedLifeStage();startUiTimers();reconcileStorageSafety({rerender:false}).then(refreshCloudCare);
 });
 
 if("serviceWorker" in navigator){
@@ -637,4 +678,4 @@ renderPetState();
 surfaceMissedMilestones();
 surfaceMissedLifeStage();
 startUiTimers();
-reconcileStorageSafety({rerender:false});
+reconcileStorageSafety({rerender:false}).then(refreshCloudCare);
