@@ -249,14 +249,14 @@ async function executeAuth(request, env, path) {
     if (!await limit(db, request, "verify", 20, 15 * 60 * 1000)) return authJson({ error: "請稍後再試" }, 429);
     if (typeof body.token !== "string" || !/^[a-f0-9]{64}$/i.test(body.token)) return authJson({ error: "驗證連結無效" }, 400);
     const hash = await digest(body.token.toLowerCase());
+    // Consume the token atomically. Concurrent requests cannot verify it twice.
     const record = await db.prepare(
-      "SELECT user_id FROM auth_tokens WHERE kind = 'verify' AND token_hash = ? AND expires_at > ? LIMIT 1"
+      "DELETE FROM auth_tokens WHERE kind='verify' AND token_hash=? AND expires_at>? RETURNING user_id"
     ).bind(hash, now).first();
     if (!record) return authJson({ error: "驗證連結已過期或已使用" }, 400);
-    await db.batch([
-      db.prepare("UPDATE users SET email_verified_at = COALESCE(email_verified_at, ?), updated_at = ? WHERE id = ?").bind(now, now, record.user_id),
-      db.prepare("DELETE FROM auth_tokens WHERE kind = 'verify' AND token_hash = ?").bind(hash)
-    ]);
+    await db.prepare(
+      "UPDATE users SET email_verified_at=COALESCE(email_verified_at, ?), updated_at=? WHERE id=?"
+    ).bind(now, now, record.user_id).run();
     const user = await db.prepare(
       "SELECT id, email, email_verified_at, password_hash, 0 AS google_linked FROM users WHERE id = ?"
     ).bind(record.user_id).first();
@@ -338,16 +338,16 @@ async function executeAuth(request, env, path) {
         !/^[a-f0-9]{64}$/i.test(body.token)) return authJson({ error: "重設資料格式不正確" }, 400);
     if (!await limit(db, request, "reset", 10, 15 * 60 * 1000)) return authJson({ error: "請稍後再試" }, 429);
     const hash = await digest(body.token.toLowerCase());
+    const pass = await hashNewPassword(body.password);
+    // Single-use reset links must be consumed atomically even under concurrency.
     const record = await db.prepare(
-      "SELECT user_id FROM auth_tokens WHERE kind='reset' AND token_hash=? AND expires_at>?"
+      "DELETE FROM auth_tokens WHERE kind='reset' AND token_hash=? AND expires_at>? RETURNING user_id"
     ).bind(hash, now).first();
     if (!record) return authJson({ error: "重設連結已過期或已使用" }, 400);
-    const pass = await hashNewPassword(body.password);
     await db.batch([
       db.prepare("UPDATE users SET password_hash=?,password_salt=?,password_iterations=?,updated_at=? WHERE id=?")
         .bind(pass.hash, pass.salt, pass.iterations, now, record.user_id),
-      db.prepare("DELETE FROM auth_sessions WHERE user_id=?").bind(record.user_id),
-      db.prepare("DELETE FROM auth_tokens WHERE kind='reset' AND token_hash=?").bind(hash)
+      db.prepare("DELETE FROM auth_sessions WHERE user_id=?").bind(record.user_id)
     ]);
     return authJson({ ok: true }, 200, { "Set-Cookie": setCookie("", 0) });
   }
