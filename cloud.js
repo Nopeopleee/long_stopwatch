@@ -15,6 +15,7 @@
         Number.isSafeInteger(value.startedAt) && value.startedAt > 0 ? value : null;
     } catch { return null; }
   }
+  function disconnect() { localStorage.removeItem(KEY); }
   function active(state) {
     const b = binding();
     return b && state && b.startedAt === state.startedAt ? b : null;
@@ -110,5 +111,5 @@
       diedAt: pet.diedAt
     } };
   }
-  window.DisuiCloud = { supported, binding, active, connectLocal, restore, read, feed, rotate, applyCare };
+  window.DisuiCloud = { supported, binding, disconnect, active, connectLocal, restore, read, feed, rotate, applyCare };
 })();
