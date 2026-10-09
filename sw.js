@@ -1,4 +1,4 @@
-const CACHE="disui-v25";
+const CACHE="disui-v26";
 const LEGACY_STATIC_HOST=self.location.hostname.endsWith(".github.io")||["localhost","127.0.0.1","::1"].includes(self.location.hostname);
 const SETTINGS_PAGE=LEGACY_STATIC_HOST?"./settings.html":"./settings";
 const PRECACHE=[
@@ -80,6 +80,8 @@ self.addEventListener("fetch",event=>{
 
   const url=new URL(request.url);
   if(url.origin!==self.location.origin)return;
+  // API responses are dynamic and must never be stored in the PWA cache.
+  if(url.pathname==="/api"||url.pathname.startsWith("/api/"))return;
 
   const acceptsHtml=request.headers.get("accept")?.includes("text/html");
   const isNavigation=request.mode==="navigate"||acceptsHtml;

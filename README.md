@@ -4,7 +4,7 @@
 
 滴歲是一個輕量、可離線使用的 PWA（漸進式網頁應用程式）。按下「開始養」就替小水滴記下出生時間，之後無論關閉網頁、切到背景或重新開機，都能在下次開啟時算出陪伴了多久。
 
-目前是**純前端、以單一裝置使用為主**的版本；不需要註冊帳號，也沒有雲端同步。
+目前**使用者的寵物資料仍以單一裝置為主**，不需要註冊帳號，也沒有雲端同步。專案已加入 Cloudflare Worker／D1 的連線雛形，但尚未開放寵物 API。
 
 ## 目前能做什麼？
 
@@ -82,15 +82,46 @@ npx serve . -l 8080
 | `storage.js` | 資料驗證、IndexedDB 鏡像、快照與復原 |
 | `share-card.js` | 使用 Canvas 2D 產生分享圖片 |
 | `sw.js` | Service Worker 與離線快取策略 |
+| `src/worker.js` | Cloudflare Worker API 入口 |
+| `migrations/` | Cloudflare D1 SQL migration |
 | `icons/`、`mascot.css`、`journey.css` | 角色、圖示與成長視覺素材 |
 
 靜態資源目前使用版本化 URL 與 Service Worker 快取。修改 JS／CSS 等資源時，請同步更新引用版本與 Service Worker 的預快取清單，避免安裝版 PWA 混用新舊檔案。
+
+## Cloudflare Worker / D1（後端雛形）
+
+目前 `disui.noppl.cc` 預計由 Cloudflare Workers + Static Assets 提供前端，`/api/*` 走 Worker；其他網站資源仍由靜態資產層處理。設定放在 `wrangler.jsonc`：
+
+- `src/worker.js`：目前只提供唯讀 `GET /api/health`，驗證 D1 連線與初始資料表是否建立。其他 `/api/*` 回傳 404。
+- `migrations/0001_create_pets.sql`：第一份寵物資料表 migration；目前**尚未提供建立／讀取／同步寵物的 API**，也不會自動上傳本機寵物資料。
+- D1 binding 名稱為 `DB`，對應資料庫 `disui-db`。前端與 Server Worker 程式碼分開，API 不會由 Service Worker 快取。
+
+### 初始化 D1 schema（需要 Cloudflare 授權）
+
+在本機 clone 專案並登入 Cloudflare：
+
+```bash
+npx wrangler login
+npx wrangler d1 migrations apply disui-db --remote
+```
+
+這一步會在**遠端 D1** 建立 `pets` 表及 migration 記錄，不會建立任何寵物紀錄；只將檔案推到 GitHub 並不會自動執行 migration。未來有新的 migration 時也使用相同指令。可先透過 `npx wrangler d1 migrations apply disui-db --local` 在本機測試。
+
+GitHub 的 Worker Builds 繼續使用 `npx wrangler deploy` 部署程式。部署成功後瀏覽 `https://disui.noppl.cc/api/health`，理想結果是：
+
+```json
+{"ok":true,"database":"connected","schemaReady":true}
+```
+
+如果看到 `schemaReady:false`，表示 Worker 已連上 D1，但尚未套用 migration。API 回傳 503 則先確認 Worker 部署狀態和 D1 binding；這些檢查不會影響目前的本機養成資料。
+
+需要測試 Worker API 時，可使用 `npx wrangler dev`；前面的 `python -m http.server` 與 `npx serve` 只能測試靜態前端，不會啟動 Worker／D1。
 
 ## Roadmap（尚未完成）
 
 以下是方向，不代表已經上線或承諾時程。**已完成的功能已整理在上方，不再重複列入待辦。**
 
-1. **Cloudflare 後端與雲端備份**：規劃使用 Workers、Static Assets 與 D1，加入寵物綁定、持久化資料與跨裝置復原。現有本機滴歲要能保留，不強迫重新出生；同步衝突與離線操作仍需設計。
+1. **Cloudflare 後端與雲端備份**：Workers／D1 基礎設定和健康檢查 API 已加入；仍需實作寵物綁定、持久化資料與跨裝置復原。現有本機滴歲要能保留，不強迫重新出生；同步衝突與離線操作仍需設計。
 2. **可信時間與資料規則**：新建立的線上寵物由伺服器產生可信出生時間；從現有本機資料匯入的出生時間不能直接視為排行榜的可信紀錄。後續再把需要公平性的餵食、死亡等事件移交後端判定。
 3. **里程碑與照顧通知**：加入經使用者同意的低頻提醒；關閉 PWA 後仍可靠收到通知的部分，預計使用後端搭配 Web Push。
 4. **好友、群組與排行榜**：可邀請朋友一起養、比較陪伴時間與稱號；排名需採可信的伺服器時間，並考慮隱私和防濫用。
