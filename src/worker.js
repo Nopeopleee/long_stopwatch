@@ -37,6 +37,7 @@ function publicPet(row) {
     name: row.name,
     createdAt: row.created_at,
     origin: row.origin,
+    ...(row.origin === "legacy" ? { legacyStartedAt: row.legacy_started_at } : {}),
     lastFedAt: row.last_fed_at,
     feedCount: row.feed_count,
     diedAt: row.died_at,
@@ -99,7 +100,7 @@ async function getPet(request, db, id) {
   // Authorization and retrieval happen in one query. Do not disclose whether
   // a pet ID exists when the provided credential does not match.
   const pet = await db.prepare(
-    `SELECT id, name, created_at, origin, last_fed_at, feed_count, died_at, updated_at
+    `SELECT id, name, created_at, origin, legacy_started_at, last_fed_at, feed_count, died_at, updated_at
      FROM pets WHERE id = ? AND owner_token_hash = ? LIMIT 1`
   ).bind(id, tokenHash).first();
   return pet ? json({ pet: publicPet(pet) }) : json({ error: "Not found" }, 404);
