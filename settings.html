@@ -22,6 +22,8 @@
     })();
   </script>
   <link rel="stylesheet" href="./styles.css?v=storage-v1" />
+  <link rel="stylesheet" href="./account.css?v=auth-v1" />
+  <meta name="referrer" content="no-referrer" />
   <title>設定｜滴歲</title>
 </head>
 <body>
@@ -86,8 +88,53 @@
       </div>
     </section>
 
+    <section class="settings-section" aria-labelledby="accountTitle">
+      <h2 id="accountTitle" class="settings-section-title">滴歲帳號</h2>
+      <div class="settings-list">
+        <div class="settings-row">
+          <span class="settings-copy">
+            <strong>登入狀態</strong>
+            <span id="accountStatus" role="status" aria-live="polite">正在確認帳號…</span>
+          </span>
+        </div>
+        <div id="accountGuest" class="account-panel" hidden>
+          <div class="account-switch" role="group" aria-label="選擇登入或註冊">
+            <button type="button" id="accountLoginMode" class="account-tab is-active">登入</button>
+            <button type="button" id="accountRegisterMode" class="account-tab">建立帳號</button>
+          </div>
+          <form id="accountForm" class="account-form">
+            <label for="accountEmail">Email</label>
+            <input id="accountEmail" type="email" autocomplete="email" inputmode="email" maxlength="254" required placeholder="you@example.com" />
+            <label for="accountPassword">密碼（至少 10 個字元）</label>
+            <input id="accountPassword" type="password" autocomplete="current-password" minlength="10" maxlength="128" required />
+            <button id="accountSubmit" class="btn primary" type="submit">Email 登入</button>
+          </form>
+          <div class="account-inline-actions">
+            <button type="button" id="accountResendBtn" class="account-text-button">重寄驗證信</button>
+            <button type="button" id="accountForgotBtn" class="account-text-button">忘記密碼</button>
+          </div>
+          <p class="account-separator">或使用 Google 帳號</p>
+          <div id="accountGoogleLogin" class="account-google"></div>
+          <p id="accountProviderHint" class="settings-footnote">Google 登入與驗證郵件需要先完成服務設定。</p>
+        </div>
+        <div id="accountSignedIn" class="account-panel" hidden>
+          <p id="accountUserInfo" class="account-user-info"></p>
+          <div id="accountGoogleLinkWrap" hidden>
+            <p class="settings-footnote">你可以把 Google 登入方式綁到同一帳號。</p>
+            <div id="accountGoogleLink" class="account-google"></div>
+          </div>
+          <p id="accountPetInfo" class="settings-footnote">正在取得帳號的滴歲…</p>
+          <button type="button" id="accountLoadPet" class="btn primary" hidden>從帳號取回滴歲</button>
+          <button type="button" id="accountCreatePet" class="btn" hidden>建立新的帳號滴歲</button>
+          <button type="button" id="accountClaimPet" class="btn" hidden>將密鑰寵物歸屬到帳號</button>
+          <button type="button" id="accountLogout" class="btn">登出帳號</button>
+        </div>
+      </div>
+      <p class="settings-footnote">Email 註冊必須完成信箱驗證後才能登入；Google 登入則使用 Google 驗證的身分。登入不會自動覆蓋你目前的本機滴歲。</p>
+    </section>
+
     <section class="settings-section" aria-labelledby="cloudTitle">
-      <h2 id="cloudTitle" class="settings-section-title">雲端備份（手動啟用）</h2>
+      <h2 id="cloudTitle" class="settings-section-title">進階：密鑰雲端備份</h2>
       <div class="settings-list">
         <div class="settings-row">
           <span class="settings-copy">
@@ -101,7 +148,7 @@
         <button id="cloudDisconnectBtn" type="button" class="settings-row settings-action"><span class="settings-copy"><strong>解除此裝置的雲端綁定</strong><span>不會刪除 D1 資料，請先保存還原資訊</span></span></button>
         <button id="cloudRotateBtn" type="button" class="settings-row settings-action"><span class="settings-copy"><strong>輪替雲端密鑰</strong><span>舊密鑰會立即失效</span></span></button>
       </div>
-      <p class="settings-footnote">目前使用持有者密鑰，不是帳號登入。若密鑰與本機資料同時遺失，無法還原。雲端餵食需網路連線；綁定後本機餵食不再離線計數。</p>
+      <p class="settings-footnote">此為早期手動密鑰機制。新使用者建議優先使用上方帳號功能。目前使用持有者密鑰，不是帳號登入。若密鑰與本機資料同時遺失，無法還原。雲端餵食需網路連線；綁定後本機餵食不再離線計數。</p>
     </section>
 
     <section id="data-safety" class="settings-section" aria-labelledby="safetyTitle">
@@ -280,9 +327,24 @@
     </div>
   </dialog>
 
+  <dialog id="accountResetDialog" aria-labelledby="accountResetTitle">
+    <form method="dialog" id="accountResetForm" class="dialog-card">
+      <span class="dialog-kicker">帳號安全</span>
+      <h2 id="accountResetTitle">重設滴歲密碼</h2>
+      <label for="accountNewPassword">新密碼（至少 10 個字元）</label>
+      <input id="accountNewPassword" type="password" autocomplete="new-password" minlength="10" maxlength="128" required />
+      <div class="dialog-actions">
+        <button id="accountResetCancel" class="btn" type="button">取消</button>
+        <button id="accountResetSubmit" class="btn primary" type="submit">儲存新密碼</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="./common.js?v=award-v1"></script>
   <script src="./storage.js?v=storage-v1"></script>
   <script src="./cloud.js?v=cloud-v1"></script>
+  <script src="./account.js?v=auth-v1"></script>
   <script src="./settings.js?v=cloud-v1"></script>
+  <script src="./account-ui.js?v=auth-v1"></script>
 </body>
 </html>
