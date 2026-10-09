@@ -333,6 +333,28 @@ async function feedPet(){
     if(navigator.vibrate)navigator.vibrate([35,35,65]);
     return;
   }
+  if(window.DisuiAccount?.bound(state)){
+    if(els.feedBtn.disabled)return;
+    els.feedBtn.disabled=true;
+    try{
+      const result=await DisuiAccount.feed();
+      state=DisuiAccount.mergePet(state,result.pet);
+      saveState();
+      updateCareUI();
+      pulseMascot("is-fed",1050);
+      announce(`滴歲吃飽了，累積有效餵食 ${state.care.feedCount} 次`);
+    }catch(error){
+      if(error.status===409&&error.response?.pet){
+        state=DisuiAccount.mergePet(state,error.response.pet);
+        saveState();
+        updateCareUI();
+        announce("伺服器顯示滴歲還很飽，稍後再餵食");
+      }else{
+        alert("帳號餵食失敗，本機紀錄沒有變動。請確認網路及登入狀態。");
+      }
+    }finally{els.feedBtn.disabled=false}
+    return;
+  }
   if(window.DisuiCloud?.active(state)){
     if(els.feedBtn.disabled)return;
     els.feedBtn.disabled=true;
@@ -600,6 +622,37 @@ async function reconcileStorageSafety({rerender=true}={}){
   }
 }
 
+async function refreshAccountCare(){
+  if(!window.DisuiAccount?.secure()||document.hidden)return false;
+  try{
+    const auth=await DisuiAccount.me();
+    if(!auth.user)return false;
+    const {pet}=await DisuiAccount.pet();
+    if(!pet)return false;
+    const born=pet.origin==="legacy"?pet.legacyStartedAt:pet.createdAt;
+    if(!state.startedAt){
+      state=DisuiAccount.restore(pet);
+      previousDoneCount=null;lastMilestoneCount=null;lastLifeStageIndex=null;lastCareStatusKey=null;
+      renderPetState();startUiTimers();
+      return true;
+    }
+    if(state.startedAt!==born)return true; // Do not silently replace a different local pet.
+    if(!DisuiAccount.bound(state))DisuiAccount.attach(pet);
+    if(DisuiAccount.binding()?.id!==pet.id)return true;
+    const next=DisuiAccount.mergePet(state,pet);
+    if(JSON.stringify(next)!==JSON.stringify(state)){
+      state=next;saveState();renderPetState();
+    }
+    return true;
+  }catch(error){
+    console.warn("Account refresh skipped; local data preserved",error);
+    return false;
+  }
+}
+async function refreshRemoteCare(){
+  const hasAccountPet=await refreshAccountCare();
+  if(!hasAccountPet)await refreshCloudCare();
+}
 async function refreshCloudCare(){
   if(!window.DisuiCloud?.active(state)||document.hidden)return;
   const expectedStartedAt=state.startedAt;
@@ -625,30 +678,55 @@ function toggleMilestoneArchive(){
   els.milestoneToggleText.textContent=willOpen?"收起完整旅程":`查看全部 ${milestoneDefs.length} 個里程碑`;
   if(willOpen)announce("已展開完整里程碑列表");
 }
-function startPet(){
-  if(state.startedAt)return;
-  const bornAt=Date.now();
-  state={...state,startedAt:bornAt,care:createCare(bornAt)};
-  saveState();previousDoneCount=null;lastMilestoneCount=null;lastLifeStageIndex=null;lastCareStatusKey=null;saveMilestoneSeen(0);saveLifeStageSeen(0);
-  renderPetState();startUiTimers();announce("滴歲出生了");
+async function startPet(){
+  if(state.startedAt||els.startBtn.disabled)return;
+  els.startBtn.disabled=true;
+  try{
+    let birth;
+    if(window.DisuiAccount?.secure()){
+      const {user}=await DisuiAccount.me();
+      if(user){
+        const {pet}=await DisuiAccount.createPet(state.name);
+        state=DisuiAccount.restore(pet);
+        birth=state.startedAt;
+      }
+    }
+    if(!birth){
+      const bornAt=Date.now();
+      state={...state,startedAt:bornAt,care:createCare(bornAt)};
+      saveState();
+    }
+    previousDoneCount=null;lastMilestoneCount=null;lastLifeStageIndex=null;lastCareStatusKey=null;
+    saveMilestoneSeen(0);saveLifeStageSeen(0);
+    renderPetState();startUiTimers();announce("滴歲出生了");
+  }catch(error){
+    alert("建立滴歲失敗：" + error.message + "。若帳號已有滴歲，請到設定頁取回。");
+  }finally{els.startBtn.disabled=false}
 }
 function openRenameDialog(){
   els.renameInput.value=state.name||"我的碼表";
   els.renameDialog.showModal();
   requestAnimationFrame(()=>{els.renameInput.focus();els.renameInput.select()});
 }
-function saveRenameFromDialog(){
+async function saveRenameFromDialog(){
   const name=els.renameInput.value.trim();
   if(!name){alert("名字不能是空白");return false}
-  state={...state,name};saveState();els.title.textContent=state.name;announce(`名字已改成 ${state.name}`);return true;
+  try{
+    if(window.DisuiAccount?.bound(state)){
+      const response=await DisuiAccount.rename(name);
+      state=DisuiAccount.mergePet(state,response.pet);
+    }else state={...state,name};
+    saveState();els.title.textContent=state.name;announce(`名字已改成 ${state.name}`);
+    return true;
+  }catch(error){alert("改名失敗：" + error.message);return false}
 }
 
 els.startBtn.addEventListener("click",startPet);
 els.renameBtn.addEventListener("click",openRenameDialog);
 els.renameForm.addEventListener("submit",e=>e.preventDefault());
-els.saveRenameBtn.addEventListener("click",()=>{if(saveRenameFromDialog())els.renameDialog.close()});
+els.saveRenameBtn.addEventListener("click",async()=>{if(await saveRenameFromDialog())els.renameDialog.close()});
 els.cancelRenameBtn.addEventListener("click",()=>els.renameDialog.close());
-els.renameInput.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();if(saveRenameFromDialog())els.renameDialog.close()}});
+els.renameInput.addEventListener("keydown",async e=>{if(e.key==="Enter"){e.preventDefault();if(await saveRenameFromDialog())els.renameDialog.close()}});
 els.unlockToastDismiss?.addEventListener("click",hideUnlockToast);
 els.evolutionDismiss?.addEventListener("click",hideEvolution);
 els.feedBtn?.addEventListener("click",feedPet);
@@ -661,7 +739,7 @@ els.backupReminderDismiss?.addEventListener("click",()=>{
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden){stopUiTimers();return}
   state=loadState();previousDoneCount=null;lastMilestoneCount=null;lastLifeStageIndex=null;lastCareStatusKey=null;
-  renderPetState();surfaceMissedMilestones();surfaceMissedLifeStage();startUiTimers();reconcileStorageSafety({rerender:false}).then(refreshCloudCare);
+  renderPetState();surfaceMissedMilestones();surfaceMissedLifeStage();startUiTimers();reconcileStorageSafety({rerender:false}).then(refreshRemoteCare);
 });
 
 if("serviceWorker" in navigator){
