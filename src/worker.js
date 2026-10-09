@@ -105,6 +105,84 @@ async function getPet(request, db, id) {
   return pet ? json({ pet: publicPet(pet) }) : json({ error: "Not found" }, 404);
 }
 
+
+const CARE_COOLDOWN_MS = 12 * 60 * 60 * 1000;
+
+async function ownedPet(request, db, id) {
+  const token = bearerToken(request);
+  if (!token) return { error: json({ error: "Bearer token required" }, 401, { "WWW-Authenticate": "Bearer" }) };
+  const hash = await sha256(token);
+  const row = await db.prepare(
+    "SELECT id, name, created_at, origin, legacy_started_at, last_fed_at, feed_count, died_at, updated_at FROM pets WHERE id = ? AND owner_token_hash = ? LIMIT 1"
+  ).bind(id, hash).first();
+  if (!row) return { error: json({ error: "Not found" }, 404) };
+  return { row, hash };
+}
+
+async function feedPet(request, db, id) {
+  const owner = await ownedPet(request, db, id);
+  if (owner.error) return owner.error;
+  const now = Date.now();
+  // Atomic conditional update prevents two simultaneous feeds from bypassing cooldown.
+  const result = await db.prepare(
+    "UPDATE pets SET last_fed_at = ?, feed_count = feed_count + 1, updated_at = ? WHERE id = ? AND owner_token_hash = ? AND died_at IS NULL AND last_fed_at <= ?"
+  ).bind(now, now, id, owner.hash, now - CARE_COOLDOWN_MS).run();
+  if (result.meta.changes !== 1) {
+    const fresh = await ownedPet(request, db, id);
+    if (fresh.error) return fresh.error;
+    return json({ error: "Feeding is unavailable", pet: publicPet(fresh.row),
+      nextFeedAt: fresh.row.last_fed_at + CARE_COOLDOWN_MS }, 409);
+  }
+  const fresh = await ownedPet(request, db, id);
+  return json({ pet: publicPet(fresh.row), nextFeedAt: now + CARE_COOLDOWN_MS });
+}
+
+async function rotateToken(request, db, id) {
+  const owner = await ownedPet(request, db, id);
+  if (owner.error) return owner.error;
+  const newOwnerToken = newToken();
+  const newHash = await sha256(newOwnerToken);
+  const result = await db.prepare(
+    "UPDATE pets SET owner_token_hash = ?, updated_at = ? WHERE id = ? AND owner_token_hash = ?"
+  ).bind(newHash, Date.now(), id, owner.hash).run();
+  if (result.meta.changes !== 1) return json({ error: "Token already rotated" }, 409);
+  return json({ ownerToken: newOwnerToken });
+}
+
+async function importLegacyPet(request, db) {
+  if (!/^application\/json(?:\s*;|\s*$)/i.test(request.headers.get("Content-Type") || "")) {
+    return json({ error: "Content-Type must be application/json" }, 415);
+  }
+  let body;
+  try {
+    const raw = await request.text();
+    if (raw.length > 2048) return json({ error: "Request too large" }, 413);
+    body = JSON.parse(raw);
+  } catch {
+    return json({ error: "Invalid JSON" }, 400);
+  }
+  const now = Date.now();
+  if (!body || typeof body !== "object" || Array.isArray(body) ||
+      Object.keys(body).some(k => !["name", "startedAt", "lastFedAt", "feedCount"].includes(k)) ||
+      !validName(body.name) || !Number.isSafeInteger(body.startedAt) || body.startedAt <= 0 ||
+      body.startedAt > now || !Number.isSafeInteger(body.lastFedAt) ||
+      body.lastFedAt < body.startedAt || body.lastFedAt > now ||
+      !Number.isSafeInteger(body.feedCount) || body.feedCount < 0 || body.feedCount > 100000000) {
+    return json({ error: "Invalid legacy pet data" }, 400);
+  }
+  const id = crypto.randomUUID();
+  const ownerToken = newToken();
+  const hash = await sha256(ownerToken);
+  // Local birth timestamp remains untrusted. Server-created timestamp is separate.
+  await db.prepare(
+    "INSERT INTO pets (id, name, created_at, origin, legacy_started_at, owner_token_hash, last_fed_at, feed_count, died_at, updated_at) VALUES (?, ?, ?, 'legacy', ?, ?, ?, ?, NULL, ?)"
+  ).bind(id, body.name, now, body.startedAt, hash, body.lastFedAt, body.feedCount, now).run();
+  return json({ pet: {
+    id, name: body.name, createdAt: now, origin: "legacy", legacyStartedAt: body.startedAt,
+    lastFedAt: body.lastFedAt, feedCount: body.feedCount, diedAt: null, updatedAt: now
+  }, ownerToken }, 201, { Location: `/api/pets/${id}` });
+}
+
 export default {
   async fetch(request, env) {
     const { pathname } = new URL(request.url);
@@ -129,14 +207,20 @@ export default {
 
     const petId = /^\/api\/pets\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(pathname)?.[1];
     const collection = pathname === "/api/pets";
-    if (!collection && !petId) return json({ error: "Not found" }, 404);
-    const allow = collection ? "POST" : "GET";
+    const importing = pathname === "/api/pets/import";
+    const feeding = /^\/api\/pets\/([0-9a-f-]{36})\/feed$/i.exec(pathname)?.[1];
+    const rotating = /^\/api\/pets\/([0-9a-f-]{36})\/rotate-token$/i.exec(pathname)?.[1];
+    if (!collection && !petId && !importing && !feeding && !rotating) return json({ error: "Not found" }, 404);
+    const allow = collection || importing || feeding || rotating ? "POST" : "GET";
     if (request.method !== allow) {
       return json({ error: "Method not allowed" }, 405, { Allow: allow });
     }
 
     try {
       if (collection) return await createPet(request, env.DB);
+      if (importing) return await importLegacyPet(request, env.DB);
+      if (feeding) return await feedPet(request, env.DB, feeding);
+      if (rotating) return await rotateToken(request, env.DB, rotating);
       return await getPet(request, env.DB, petId);
     } catch (error) {
       console.error("Pet API failed", error);
