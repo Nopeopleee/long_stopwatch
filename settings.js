@@ -59,11 +59,11 @@ async function importBackup(file){
     }
     saveState({name:incoming.name.trim()||"我的碼表",startedAt,care});
     localStorage.removeItem(CARE_DEBUG_KEY);
-    alert(hadCare||!startedAt?"備份已匯入":"備份已匯入；這是舊版備份，照顧系統會從現在開始計算");
+    alert(hadCare||!startedAt?"備份已匯入":"備份已匯入；部分舊紀錄無法還原，照顧時間會從現在重新計算");
   }catch(err){alert(`匯入失敗：${err.message}`)}
   finally{els.importFile.value=""}
 }
-function startHoldReset(){const state=loadState();if(!state.startedAt)return;if(window.DisuiAccount?.bound(state)){alert("這隻滴歲屬於帳號，不能只重置本機資料。請先登出帳號；雲端刪除功能目前尚未開放。");return;}clearInterval(holdTimer);holdStart=performance.now();els.resetBtn.classList.add("holding");holdTimer=setInterval(()=>{const elapsed=performance.now()-holdStart,pct=Math.min(100,elapsed/2000*100);els.holdProgress.style.width=`${pct}%`;if(elapsed>=2000){clearInterval(holdTimer);holdTimer=null;const finish=async()=>{if(window.DisuiStorage)await DisuiStorage.createSnapshot(state,"before-reset",{force:true}).catch(()=>{});saveState({...defaultState});localStorage.removeItem(CARE_DEBUG_KEY);els.holdProgress.style.width="0%";els.resetBtn.classList.remove("holding");if(navigator.vibrate)navigator.vibrate([80,50,120]);alert("滴歲已重置");window.location.href="./"};finish()}},40)}
+function startHoldReset(){const state=loadState();if(!state.startedAt)return;if(window.DisuiAccount?.bound(state)){alert("這隻小滴已經存到你的帳號，不能直接重置。如果要找回牠，請使用帳號登入。");return;}clearInterval(holdTimer);holdStart=performance.now();els.resetBtn.classList.add("holding");holdTimer=setInterval(()=>{const elapsed=performance.now()-holdStart,pct=Math.min(100,elapsed/2000*100);els.holdProgress.style.width=`${pct}%`;if(elapsed>=2000){clearInterval(holdTimer);holdTimer=null;const finish=async()=>{if(window.DisuiStorage)await DisuiStorage.createSnapshot(state,"before-reset",{force:true}).catch(()=>{});saveState({...defaultState});localStorage.removeItem(CARE_DEBUG_KEY);els.holdProgress.style.width="0%";els.resetBtn.classList.remove("holding");if(navigator.vibrate)navigator.vibrate([80,50,120]);alert("滴歲已重置");window.location.href="./"};finish()}},40)}
 function cancelHoldReset(){clearInterval(holdTimer);holdTimer=null;els.holdProgress.style.width="0%";els.resetBtn.classList.remove("holding")}
 function refreshInstallState(){if(window.matchMedia("(display-mode: standalone)").matches||navigator.standalone){els.installBtn.disabled=true;els.installStatus.textContent="已安裝";return}if(deferredInstallPrompt){els.installBtn.disabled=false;els.installStatus.textContent="可安裝成獨立 App";return}els.installBtn.disabled=true;els.installStatus.textContent="可從瀏覽器選單加入主畫面"}
 
@@ -100,12 +100,12 @@ async function reconcileStorageSafety(){
 async function refreshSafetyStatus(){
   if(!window.DisuiStorage)return;
   const summary=await DisuiStorage.getSafetySummary();
-  if(els.primaryStorageStatus)els.primaryStorageStatus.textContent=summary.localValid?"主要資料可正常讀取":"主要資料需要修復";
+  if(els.primaryStorageStatus)els.primaryStorageStatus.textContent=summary.localValid?"紀錄保存正常":"紀錄需要修復";
   setSafetyBadge(els.primaryStorageBadge,summary.localValid?"正常":"異常",summary.localValid?"good":"bad");
 
   if(els.mirrorStorageStatus)els.mirrorStorageStatus.textContent=!summary.idbAvailable
-    ?"此瀏覽器無法使用 IndexedDB"
-    :summary.mirrorValid?`安全副本已同步・${relativeTime(summary.mirrorUpdatedAt)}`:"尚未建立安全副本";
+    ?"這台裝置暫時無法建立備用紀錄"
+    :summary.mirrorValid?`備用紀錄已更新・${relativeTime(summary.mirrorUpdatedAt)}`:"尚未建立備用紀錄";
   setSafetyBadge(els.mirrorStorageBadge,!summary.idbAvailable?"不可用":summary.mirrorValid?"正常":"待建立",!summary.idbAvailable?"bad":summary.mirrorValid?"good":"warn");
 
   if(els.snapshotStatus)els.snapshotStatus.textContent=summary.latestSnapshotAt?`最近建立於 ${relativeTime(summary.latestSnapshotAt)}`:"還沒有復原點";
@@ -114,7 +114,7 @@ async function refreshSafetyStatus(){
   const current=loadState();
   const ref=summary.lastExportAt||current.startedAt;
   const age=ref?Date.now()-ref:0;
-  if(els.lastExportStatus)els.lastExportStatus.textContent=summary.lastExportAt?`上次匯出：${relativeTime(summary.lastExportAt)}`:"尚未匯出 JSON 備份";
+  if(els.lastExportStatus)els.lastExportStatus.textContent=summary.lastExportAt?`上次下載：${relativeTime(summary.lastExportAt)}`:"還沒下載備份";
   if(!current.startedAt)setSafetyBadge(els.backupHealthBadge,"尚未開始","");
   else if(summary.lastExportAt&&age<30*86400000)setSafetyBadge(els.backupHealthBadge,"良好","good");
   else if(!summary.lastExportAt&&age<30*86400000)setSafetyBadge(els.backupHealthBadge,"尚無備份","");
@@ -122,7 +122,13 @@ async function refreshSafetyStatus(){
   else setSafetyBadge(els.backupHealthBadge,"建議備份","bad");
 }
 function snapshotReasonLabel(reason){
-  return({auto:"每日自動",manual:"手動建立",migration:"首次建立",["before-import"]:"匯入前",["before-reset"]:"重置前",["before-restore"]:"還原前",["before-repair"]:"修復前",["conflict-loser"]:"衝突保留"})[reason]||reason||"快照";
+  return({
+    auto:"每日自動保存",manual:"手動保存",migration:"首次保存",
+    ["before-import"]:"還原檔案前",["before-reset"]:"重新開始前",
+    ["before-restore"]:"還原之前",["before-repair"]:"修復之前",
+    ["before-cloud-bind"]:"啟用舊版備份前",["before-cloud-restore"]:"從舊版備份還原前",
+    ["before-account-restore"]:"切換帳號小滴前",["conflict-loser"]:"備用紀錄"
+  })[reason]||"自動保存";
 }
 async function openSnapshotDialog(){
   if(!window.DisuiStorage||!els.snapshotDialog||!els.snapshotList)return;
@@ -238,42 +244,45 @@ function updateCloudStatus(){
   const binding=window.DisuiCloud?.binding();
   const state=loadState();
   const matched=window.DisuiCloud?.active(state);
+  const accountPet=!!window.DisuiAccount?.bound(state);
   if(cloudStatus)cloudStatus.textContent=!window.DisuiCloud?.supported()
-    ?"目前網址不支援雲端 API，請使用正式網站"
-    :matched?`已綁定：${binding.id}（雲端餵食）`
-    :binding?"這個瀏覽器綁定了另一隻滴歲，請先確認本機資料"
-    :"尚未綁定；既有寵物不會自動上傳";
-  if(cloudBindBtn)cloudBindBtn.disabled=!window.DisuiCloud?.supported()||!!binding||!state.startedAt;
+    ?"請在滴歲的正式網站使用此功能"
+    :accountPet?"這隻小滴已經由帳號保存，不需要再用舊版備份"
+    :matched?"已保存舊版備份，請妥善保管還原資訊"
+    :binding?"已連結另一隻小滴的舊版備份"
+    :"尚未使用舊版備份";
+  if(cloudBindBtn)cloudBindBtn.disabled=!window.DisuiCloud?.supported()||!!binding||!state.startedAt||accountPet;
   if(cloudCopyBtn)cloudCopyBtn.disabled=!matched;
   if(cloudRotateBtn)cloudRotateBtn.disabled=!matched;
   if(cloudDisconnectBtn)cloudDisconnectBtn.disabled=!binding;
 }
 cloudBindBtn?.addEventListener("click",async()=>{
   const state=loadState();
-  if(!confirm("將目前滴歲的名稱、出生時間與餵食紀錄上傳到 D1？出生時間會標記為舊資料，不作為可信排行依據。"))return;
+  if(window.DisuiAccount?.bound(state)){alert("這隻小滴已由帳號保存，不需要再使用舊版備份。");return;}
+  if(!confirm("確定要使用舊版方式備份這隻小滴嗎？如果已經有帳號，建議直接使用帳號保存。"))return;
   cloudBindBtn.disabled=true;
   try{
     if(window.DisuiStorage)await DisuiStorage.createSnapshot(state,"before-cloud-bind",{force:true});
     const data=await DisuiCloud.connectLocal(state);
-    alert("已綁定雲端！請立即複製並妥善保存還原資訊。雲端同步從現在開始生效。");
+    alert("備份完成！請立即複製並妥善保存還原資訊。");
     updateCloudStatus();
   }catch(error){alert(`雲端綁定失敗：${error.message}`);updateCloudStatus()}
 });
 cloudRestoreBtn?.addEventListener("click",async()=>{
   if(!window.DisuiCloud?.supported()){alert("請在正式網站操作");return}
-  const id=prompt("請貼上寵物 ID（UUID）");
+  const id=prompt("請貼上舊版小滴編號");
   if(!id)return;
-  const token=prompt("請貼上 64 位十六進位還原密鑰（不要與任何人分享）");
+  const token=prompt("請貼上舊版還原碼（不要與任何人分享）");
   if(!token)return;
   try{
     const restore=await DisuiCloud.restore(id,token);
     const previous=loadState();
-    if(previous.startedAt&&!confirm("此操作會用雲端寵物取代目前畫面上的本機寵物。原本資料將先建立本機快照，確定繼續嗎？"))return;
+    if(previous.startedAt&&!confirm("要用以前備份的小滴取代這台裝置目前的小滴嗎？系統會先幫你保存原本的紀錄。"))return;
     if(window.DisuiStorage&&previous.startedAt)await DisuiStorage.createSnapshot(previous,"before-cloud-restore",{force:true});
     saveState(restore.state);
     restore.bind();
     localStorage.removeItem(CARE_DEBUG_KEY);
-    alert("雲端還原完成！即將返回首頁。");
+    alert("小滴已找回！即將返回首頁。");
     location.href="./";
   }catch(error){alert(`還原失敗：${error.message}`)}
 });
@@ -282,24 +291,37 @@ cloudCopyBtn?.addEventListener("click",async()=>{
   const b=DisuiCloud.active(state);
   if(!b)return;
   try{
-    await navigator.clipboard.writeText(`滴歲雲端還原資訊\\nID: ${b.id}\\n密鑰: ${b.token}`);
-    alert("還原資訊已複製，請存到密碼管理器或安全的離線位置。");
+    await navigator.clipboard.writeText(`滴歲舊版還原資訊\n寵物編號: ${b.id}\n還原碼: ${b.token}`);
+    alert("還原資訊已複製。請保存到安全的地方。");
   }catch{alert("複製失敗；瀏覽器可能不允許存取剪貼簿")}
 });
 cloudRotateBtn?.addEventListener("click",async()=>{
   const state=loadState();
-  if(!confirm("確定輪替密鑰？舊密鑰會失效，其他裝置也會需要更新。請在輪替後立即保存新密鑰。"))return;
+  if(!confirm("確定更新還原碼？舊的還原碼將不能使用，其他裝置也需要重新設定。"))return;
   try{
     await DisuiCloud.rotate(state);
     updateCloudStatus();
-    alert("密鑰已輪替，請立即使用「複製還原資訊」備份新的密鑰。");
-  }catch(error){alert(`密鑰輪替失敗：${error.message}`)}
+    alert("還原碼已更新，請記得複製並保存新的還原資訊。");
+  }catch(error){alert(`更新還原碼失敗：${error.message}`)}
 });
 updateCloudStatus();
 
 cloudDisconnectBtn?.addEventListener("click",()=>{
   if(!DisuiCloud.binding())return;
-  if(!confirm("解除雲端綁定後將改為本機餵食。遠端資料不會被刪除。請確認已備份寵物 ID 與密鑰。"))return;
+  if(!confirm("停止使用舊版備份後，這台裝置會改成只在本機保存餵食紀錄。之前的備份不會刪除，請先保管好還原資訊。"))return;
   DisuiCloud.disconnect();
   updateCloudStatus();
 });
+
+function revealAdvancedForHash(){
+  const hash=location.hash;
+  if(hash!=="#data-safety"&&hash!=="#cloudTitle"&&hash!=="#advancedSettings")return;
+  const details=document.getElementById("advancedSettings");
+  if(!details)return;
+  details.open=true;
+  requestAnimationFrame(()=>{
+    document.querySelector(hash)?.scrollIntoView({block:"start"});
+  });
+}
+window.addEventListener("hashchange",revealAdvancedForHash);
+revealAdvancedForHash();

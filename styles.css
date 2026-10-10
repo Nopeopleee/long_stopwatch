@@ -105,10 +105,11 @@ button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{ou
 .milestone-head h2{margin:0;font-size:clamp(1.4rem,3vw,1.9rem);letter-spacing:-.035em}
 .milestone-summary{margin:7px 0 0;color:var(--muted);font-size:.85rem;line-height:1.45}
 .milestone-count{padding:8px 11px;border:1px solid var(--stroke);border-radius:999px;background:var(--soft);color:var(--muted);font-size:.78rem;font-weight:720;font-variant-numeric:tabular-nums}
-.milestone-progress{height:7px;margin:20px 0 18px;border-radius:999px;background:var(--soft-strong);overflow:hidden}
-.milestone-progress>span{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5acfff,#76ebd0,#9ba8ff);box-shadow:0 0 22px rgba(95,218,255,.28);position:relative;transition:width .45s cubic-bezier(.22,.8,.22,1)}
-.milestone-progress>span::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.58),transparent);transform:translateX(-100%);animation:shimmer 3.6s ease-in-out infinite}
-@keyframes shimmer{55%,100%{transform:translateX(120%)}}
+/* The fill represents the whole journey, so unlocking a milestone never
+   animates backwards from 100% to zero. No perpetual shimmer on tiny fills. */
+.milestone-progress{height:7px;margin:20px 0 18px;border-radius:999px;background:var(--soft-strong);overflow:hidden;isolation:isolate}
+.milestone-progress>span{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5acfff,#76ebd0,#9ba8ff);box-shadow:0 0 18px rgba(95,218,255,.24);transition:width .65s cubic-bezier(.22,.8,.22,1);will-change:width}
+@media(prefers-reduced-motion:reduce){.milestone-progress>span{transition:none;will-change:auto}}
 .milestones{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .milestone{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:76px;padding:12px 13px;border:1px solid var(--stroke);border-radius:18px;background:var(--soft);transition:transform .18s ease,border-color .18s ease,background .18s ease}
 .milestone:hover{transform:translateY(-2px);border-color:var(--stroke-strong);background:var(--soft-strong)}
@@ -158,7 +159,28 @@ dialog::backdrop{background:rgba(1,8,13,.68);backdrop-filter:blur(8px);-webkit-b
 .settings-select:focus{border-color:var(--accent)}
 .danger-settings{margin-top:34px}.danger-settings .settings-section-title{color:var(--danger)}.danger-list{border-color:rgba(255,112,132,.13)}.danger-row{color:var(--danger)}.danger-icon{background:var(--danger-bg);color:var(--danger);border-color:rgba(255,112,132,.12)}.danger-row .settings-copy span{color:var(--muted)}.danger-row.holding{background:var(--danger-bg)}
 .row-progress{position:absolute;left:0;right:0;bottom:0;height:3px;background:transparent;overflow:hidden}.row-progress>span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--danger-line),#ffb0ba);box-shadow:0 0 15px rgba(255,112,132,.3);transition:width .04s linear}
-.settings-footnote{margin:5px 14px 0;color:var(--faint);font-size:.75rem;line-height:1.55;text-align:center}
+.settings-footnote{margin:5px 14px 0;color:var(--muted);font-size:.75rem;line-height:1.55;text-align:center}
+/* Friendly everyday settings; diagnostics and old restore flows remain available
+   behind a native disclosure instead of crowding the account experience. */
+.settings-advanced{margin:6px 0 25px;border:1px solid var(--stroke);border-radius:22px;background:linear-gradient(140deg,rgba(91,207,255,.035),transparent 72%),var(--surface);overflow:hidden;box-shadow:var(--shadow-soft)}
+.settings-advanced-toggle{display:flex;align-items:center;gap:13px;min-height:78px;padding:15px 18px;list-style:none;cursor:pointer;user-select:none}
+.settings-advanced-toggle::-webkit-details-marker{display:none}
+.settings-advanced-toggle:hover{background:var(--soft)}
+.settings-advanced-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:-3px;border-radius:18px}
+.settings-advanced-icon{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:14px;background:var(--soft);border:1px solid var(--stroke);color:var(--accent);font-size:1.1rem}
+.settings-advanced-copy{min-width:0;display:flex;flex:1;flex-direction:column;gap:4px}
+.settings-advanced-copy strong{color:var(--text);font-size:.93rem;font-weight:740}
+.settings-advanced-copy small{color:var(--muted);font-size:.75rem;line-height:1.45}
+.settings-advanced-chevron{color:var(--muted);font-size:1.3rem;transition:transform .2s ease}
+.settings-advanced[open] .settings-advanced-chevron{transform:rotate(180deg)}
+.settings-advanced-content{padding:0 14px 4px;border-top:1px solid var(--separator)}
+.settings-advanced-content>.settings-section{margin-top:22px;margin-bottom:22px}
+.settings-advanced-content>.settings-section:first-child{margin-top:20px}
+.settings-advanced-content .settings-section-title{margin-left:8px}
+.settings-advanced-content .settings-list{box-shadow:none;background:var(--soft)}
+@media(max-width:480px){.settings-advanced-toggle{padding:13px}.settings-advanced-content{padding:0 9px 4px}}
+@media(prefers-reduced-motion:reduce){.settings-advanced-chevron{transition:none}}
+
 
 @media(max-width:700px){
   .app-shell{padding-left:12px;padding-right:12px}

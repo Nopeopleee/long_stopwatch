@@ -21,7 +21,7 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="./styles.css?v=storage-v1" />
+  <link rel="stylesheet" href="./styles.css?v=ui-v2" />
   <link rel="stylesheet" href="./account.css?v=auth-v1" />
   <meta name="referrer" content="no-referrer" />
   <title>設定｜滴歲</title>
@@ -39,6 +39,51 @@
         <div class="settings-subtitle">讓滴歲照你的方式生活</div>
       </div>
     </header>
+
+    <section class="settings-section" aria-labelledby="accountTitle">
+      <h2 id="accountTitle" class="settings-section-title">我的帳號</h2>
+      <div class="settings-list">
+        <div class="settings-row">
+          <span class="settings-copy">
+            <strong>帳號</strong>
+            <span id="accountStatus" role="status" aria-live="polite">正在確認帳號…</span>
+          </span>
+        </div>
+        <div id="accountGuest" class="account-panel" hidden>
+          <div class="account-switch" role="group" aria-label="選擇登入或註冊">
+            <button type="button" id="accountLoginMode" class="account-tab is-active">登入</button>
+            <button type="button" id="accountRegisterMode" class="account-tab">建立帳號</button>
+          </div>
+          <form id="accountForm" class="account-form">
+            <label for="accountEmail">Email</label>
+            <input id="accountEmail" type="email" autocomplete="email" inputmode="email" maxlength="254" required placeholder="you@example.com" />
+            <label for="accountPassword">密碼（至少 10 個字元）</label>
+            <input id="accountPassword" type="password" autocomplete="current-password" minlength="10" maxlength="128" required />
+            <button id="accountSubmit" class="btn primary" type="submit">Email 登入</button>
+          </form>
+          <div class="account-inline-actions">
+            <button type="button" id="accountResendBtn" class="account-text-button">重寄驗證信</button>
+            <button type="button" id="accountForgotBtn" class="account-text-button">忘記密碼</button>
+          </div>
+          <p class="account-separator">或使用 Google 帳號</p>
+          <div id="accountGoogleLogin" class="account-google"></div>
+          <p id="accountProviderHint" class="settings-footnote" role="status" hidden></p>
+        </div>
+        <div id="accountSignedIn" class="account-panel" hidden>
+          <p id="accountUserInfo" class="account-user-info"></p>
+          <div id="accountGoogleLinkWrap" hidden>
+            <p class="settings-footnote">你可以把 Google 登入方式綁到同一帳號。</p>
+            <div id="accountGoogleLink" class="account-google"></div>
+          </div>
+          <p id="accountPetInfo" class="settings-footnote">正在取得帳號的滴歲…</p>
+          <button type="button" id="accountLoadPet" class="btn primary" hidden>在這台裝置繼續照顧</button>
+          <button type="button" id="accountCreatePet" class="btn" hidden>養一隻新的小滴</button>
+          <button type="button" id="accountClaimPet" class="btn" hidden>把以前的小滴帶過來</button>
+          <button type="button" id="accountLogout" class="btn">登出帳號</button>
+        </div>
+      </div>
+      <p class="settings-footnote">註冊後請到信箱完成驗證。登入不會自動取代這台裝置的小滴。</p>
+    </section>
 
     <section class="settings-section" aria-labelledby="appearanceTitle">
       <h2 id="appearanceTitle" class="settings-section-title">外觀</h2>
@@ -61,15 +106,15 @@
     </section>
 
     <section class="settings-section" aria-labelledby="dataTitle">
-      <h2 id="dataTitle" class="settings-section-title">資料</h2>
+      <h2 id="dataTitle" class="settings-section-title">備份與資料</h2>
       <div class="settings-list">
         <button id="exportBtn" type="button" class="settings-row settings-action">
           <span class="settings-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3"/></svg>
           </span>
           <span class="settings-copy">
-            <strong>匯出備份</strong>
-            <span>把名字、出生時間與照顧狀態帶走</span>
+            <strong>下載備份</strong>
+            <span>將小滴的紀錄保存成檔案</span>
           </span>
           <span class="settings-chevron" aria-hidden="true">›</span>
         </button>
@@ -79,8 +124,8 @@
             <svg viewBox="0 0 24 24"><path d="M12 21V9m0 0 4 4m-4-4-4 4M5 7V4h14v3"/></svg>
           </span>
           <span class="settings-copy">
-            <strong>匯入備份</strong>
-            <span>從備份檔把滴歲接回來</span>
+            <strong>從備份還原</strong>
+            <span>從之前保存的檔案找回小滴</span>
           </span>
           <span class="settings-chevron" aria-hidden="true">›</span>
         </button>
@@ -88,138 +133,8 @@
       </div>
     </section>
 
-    <section class="settings-section" aria-labelledby="accountTitle">
-      <h2 id="accountTitle" class="settings-section-title">滴歲帳號</h2>
-      <div class="settings-list">
-        <div class="settings-row">
-          <span class="settings-copy">
-            <strong>登入狀態</strong>
-            <span id="accountStatus" role="status" aria-live="polite">正在確認帳號…</span>
-          </span>
-        </div>
-        <div id="accountGuest" class="account-panel" hidden>
-          <div class="account-switch" role="group" aria-label="選擇登入或註冊">
-            <button type="button" id="accountLoginMode" class="account-tab is-active">登入</button>
-            <button type="button" id="accountRegisterMode" class="account-tab">建立帳號</button>
-          </div>
-          <form id="accountForm" class="account-form">
-            <label for="accountEmail">Email</label>
-            <input id="accountEmail" type="email" autocomplete="email" inputmode="email" maxlength="254" required placeholder="you@example.com" />
-            <label for="accountPassword">密碼（至少 10 個字元）</label>
-            <input id="accountPassword" type="password" autocomplete="current-password" minlength="10" maxlength="128" required />
-            <button id="accountSubmit" class="btn primary" type="submit">Email 登入</button>
-          </form>
-          <div class="account-inline-actions">
-            <button type="button" id="accountResendBtn" class="account-text-button">重寄驗證信</button>
-            <button type="button" id="accountForgotBtn" class="account-text-button">忘記密碼</button>
-          </div>
-          <p class="account-separator">或使用 Google 帳號</p>
-          <div id="accountGoogleLogin" class="account-google"></div>
-          <p id="accountProviderHint" class="settings-footnote">Google 登入與驗證郵件需要先完成服務設定。</p>
-        </div>
-        <div id="accountSignedIn" class="account-panel" hidden>
-          <p id="accountUserInfo" class="account-user-info"></p>
-          <div id="accountGoogleLinkWrap" hidden>
-            <p class="settings-footnote">你可以把 Google 登入方式綁到同一帳號。</p>
-            <div id="accountGoogleLink" class="account-google"></div>
-          </div>
-          <p id="accountPetInfo" class="settings-footnote">正在取得帳號的滴歲…</p>
-          <button type="button" id="accountLoadPet" class="btn primary" hidden>從帳號取回滴歲</button>
-          <button type="button" id="accountCreatePet" class="btn" hidden>建立新的帳號滴歲</button>
-          <button type="button" id="accountClaimPet" class="btn" hidden>將密鑰寵物歸屬到帳號</button>
-          <button type="button" id="accountLogout" class="btn">登出帳號</button>
-        </div>
-      </div>
-      <p class="settings-footnote">Email 註冊必須完成信箱驗證後才能登入；Google 登入則使用 Google 驗證的身分。登入不會自動覆蓋你目前的本機滴歲。</p>
-    </section>
-
-    <section class="settings-section" aria-labelledby="cloudTitle">
-      <h2 id="cloudTitle" class="settings-section-title">進階：密鑰雲端備份</h2>
-      <div class="settings-list">
-        <div class="settings-row">
-          <span class="settings-copy">
-            <strong>雲端連線</strong>
-            <span id="cloudStatus" role="status">尚未綁定；既有寵物不會自動上傳</span>
-          </span>
-        </div>
-        <button id="cloudBindBtn" type="button" class="settings-row settings-action"><span class="settings-copy"><strong>將目前滴歲綁定雲端</strong><span>保留原始出生時間，先建立遠端副本</span></span></button>
-        <button id="cloudRestoreBtn" type="button" class="settings-row settings-action"><span class="settings-copy"><strong>使用 ID 與密鑰還原</strong><span>換裝置時從雲端讀回資料</span></span></button>
-        <button id="cloudCopyBtn" type="button" class="settings-row settings-action"><span class="settings-copy"><strong>複製還原資訊</strong><span>包含私密密鑰，請存放在安全位置</span></span></button>
-        <button id="cloudDisconnectBtn" type="button" class="settings-row settings-action"><span class="settings-copy"><strong>解除此裝置的雲端綁定</strong><span>不會刪除 D1 資料，請先保存還原資訊</span></span></button>
-        <button id="cloudRotateBtn" type="button" class="settings-row settings-action"><span class="settings-copy"><strong>輪替雲端密鑰</strong><span>舊密鑰會立即失效</span></span></button>
-      </div>
-      <p class="settings-footnote">此為早期手動密鑰機制。新使用者建議優先使用上方帳號功能。目前使用持有者密鑰，不是帳號登入。若密鑰與本機資料同時遺失，無法還原。雲端餵食需網路連線；綁定後本機餵食不再離線計數。</p>
-    </section>
-
-    <section id="data-safety" class="settings-section" aria-labelledby="safetyTitle">
-      <h2 id="safetyTitle" class="settings-section-title">資料安全</h2>
-      <div class="settings-list safety-list">
-        <div class="settings-row">
-          <span class="settings-icon settings-icon-accent" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.8 8.2 7 10 4.2-1.8 7-5.4 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
-          </span>
-          <span class="settings-copy">
-            <strong>本機主資料</strong>
-            <span id="primaryStorageStatus">檢查中…</span>
-          </span>
-          <span id="primaryStorageBadge" class="safety-badge">—</span>
-        </div>
-        <div class="settings-row">
-          <span class="settings-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v6c0 1.7 3.1 3 7 3s7-1.3 7-3V5M5 11v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg>
-          </span>
-          <span class="settings-copy">
-            <strong>IndexedDB 安全副本</strong>
-            <span id="mirrorStorageStatus">建立本機冗餘副本</span>
-          </span>
-          <span id="mirrorStorageBadge" class="safety-badge">—</span>
-        </div>
-        <div class="settings-row">
-          <span class="settings-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="8"/><path d="M7 4.5 4.5 7M17 4.5 19.5 7"/></svg>
-          </span>
-          <span class="settings-copy">
-            <strong>最近自動快照</strong>
-            <span id="snapshotStatus">檢查中…</span>
-          </span>
-          <span id="snapshotCountBadge" class="safety-badge">—</span>
-        </div>
-        <div class="settings-row">
-          <span class="settings-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3"/></svg>
-          </span>
-          <span class="settings-copy">
-            <strong>最近匯出備份</strong>
-            <span id="lastExportStatus">尚未匯出</span>
-          </span>
-          <span id="backupHealthBadge" class="safety-badge">—</span>
-        </div>
-        <button id="createSnapshotBtn" type="button" class="settings-row settings-action">
-          <span class="settings-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-          </span>
-          <span class="settings-copy">
-            <strong>立即建立快照</strong>
-            <span>手動保存一個本機復原點</span>
-          </span>
-          <span class="settings-chevron" aria-hidden="true">›</span>
-        </button>
-        <button id="viewSnapshotsBtn" type="button" class="settings-row settings-action">
-          <span class="settings-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6M4 4v4.6h4.6"/><path d="M12 8v4l3 2"/></svg>
-          </span>
-          <span class="settings-copy">
-            <strong>查看復原點</strong>
-            <span>最多保留最近 10 份本機快照</span>
-          </span>
-          <span class="settings-chevron" aria-hidden="true">›</span>
-        </button>
-      </div>
-      <p class="settings-footnote">安全副本和快照仍屬於這個瀏覽器的網站資料；清除網站資料或解除安裝時可能一起消失，所以 JSON 匯出仍是最重要的外部備份。</p>
-    </section>
-
     <section class="settings-section" aria-labelledby="appTitle">
-      <h2 id="appTitle" class="settings-section-title">App</h2>
+      <h2 id="appTitle" class="settings-section-title">應用程式</h2>
       <div class="settings-list">
         <button id="installBtn" type="button" class="settings-row settings-action" disabled>
           <span class="settings-icon" aria-hidden="true">
@@ -233,6 +148,104 @@
         </button>
       </div>
     </section>
+
+    <details id="advancedSettings" class="settings-advanced">
+      <summary class="settings-advanced-toggle">
+        <span class="settings-advanced-icon" aria-hidden="true">✦</span>
+        <span class="settings-advanced-copy">
+          <strong>更多備份與復原選項</strong>
+          <small>只有需要找回舊紀錄或檢查備份時才使用</small>
+        </span>
+        <span class="settings-advanced-chevron" aria-hidden="true">⌄</span>
+      </summary>
+      <div class="settings-advanced-content">
+    <section id="data-safety" class="settings-section" aria-labelledby="safetyTitle">
+      <h2 id="safetyTitle" class="settings-section-title">備份狀態與復原</h2>
+      <div class="settings-list safety-list">
+        <div class="settings-row">
+          <span class="settings-icon settings-icon-accent" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.8 8.2 7 10 4.2-1.8 7-5.4 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>裝置上的紀錄</strong>
+            <span id="primaryStorageStatus">檢查中…</span>
+          </span>
+          <span id="primaryStorageBadge" class="safety-badge">—</span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v6c0 1.7 3.1 3 7 3s7-1.3 7-3V5M5 11v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>備用紀錄</strong>
+            <span id="mirrorStorageStatus">自動保留另一份紀錄</span>
+          </span>
+          <span id="mirrorStorageBadge" class="safety-badge">—</span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="8"/><path d="M7 4.5 4.5 7M17 4.5 19.5 7"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>最近的復原點</strong>
+            <span id="snapshotStatus">檢查中…</span>
+          </span>
+          <span id="snapshotCountBadge" class="safety-badge">—</span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>上次下載備份</strong>
+            <span id="lastExportStatus">尚未匯出</span>
+          </span>
+          <span id="backupHealthBadge" class="safety-badge">—</span>
+        </div>
+        <button id="createSnapshotBtn" type="button" class="settings-row settings-action">
+          <span class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>建立復原點</strong>
+            <span>保存目前狀態，方便之後還原</span>
+          </span>
+          <span class="settings-chevron" aria-hidden="true">›</span>
+        </button>
+        <button id="viewSnapshotsBtn" type="button" class="settings-row settings-action">
+          <span class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6M4 4v4.6h4.6"/><path d="M12 8v4l3 2"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>找回之前的紀錄</strong>
+            <span>查看最近保留的 10 份紀錄</span>
+          </span>
+          <span class="settings-chevron" aria-hidden="true">›</span>
+        </button>
+      </div>
+      <p class="settings-footnote">這些復原點只存放在這台裝置。若要在重裝手機後保留紀錄，請另外下載備份檔。</p>
+    </section>
+
+    <section class="settings-section" aria-labelledby="cloudTitle">
+      <h2 id="cloudTitle" class="settings-section-title">舊版雲端備份</h2>
+      <div class="settings-list">
+        <div class="settings-row">
+          <span class="settings-copy">
+            <strong>備份狀態</strong>
+            <span id="cloudStatus" role="status">尚未綁定；既有寵物不會自動上傳</span>
+          </span>
+        </div>
+        <button id="cloudBindBtn" type="button" class="settings-row settings-action"><span class="settings-copy"><strong>備份這台裝置的小滴</strong><span>保留牠目前的陪伴紀錄</span></span></button>
+        <button id="cloudRestoreBtn" type="button" class="settings-row settings-action"><span class="settings-copy"><strong>使用還原碼找回小滴</strong><span>適用於先前使用舊版備份的紀錄</span></span></button>
+        <button id="cloudCopyBtn" type="button" class="settings-row settings-action"><span class="settings-copy"><strong>複製舊版還原資訊</strong><span>請保存到只有自己看得到的地方</span></span></button>
+        <button id="cloudDisconnectBtn" type="button" class="settings-row settings-action"><span class="settings-copy"><strong>停止在這台裝置使用舊版備份</strong><span>不會刪除之前保存的紀錄</span></span></button>
+        <button id="cloudRotateBtn" type="button" class="settings-row settings-action"><span class="settings-copy"><strong>更新舊版還原碼</strong><span>更新後原本的還原碼就不能使用</span></span></button>
+      </div>
+      <p class="settings-footnote">這是早期版本的備份方式。已經有帳號的小滴不需要使用；如果以前保存過還原碼，可以在這裡找回。請小心保管還原資訊。</p>
+    </section>
+
+      </div>
+    </details>
 
     <section id="debugSection" class="settings-section" aria-labelledby="debugTitle" hidden>
       <h2 id="debugTitle" class="settings-section-title">測試工具</h2>
@@ -274,7 +287,7 @@
           </span>
           <span class="settings-copy">
             <strong>恢復真實狀態</strong>
-            <span>清除測試覆蓋，回到真正的 lastFedAt</span>
+            <span>關閉模擬並恢復真實餵食時間</span>
           </span>
           <span class="settings-chevron" aria-hidden="true">›</span>
         </button>
@@ -310,7 +323,7 @@
       </div>
     </section>
 
-    <p class="settings-footnote">滴歲的主要資料目前只存在這台裝置的瀏覽器裡。</p>
+    <p id="settingsFooterNote" class="settings-footnote">登入後，可以在其他裝置繼續照顧小滴。沒有登入時，記得定期下載備份。</p>
   </main>
 
   <dialog id="snapshotDialog" class="recovery-dialog" aria-labelledby="snapshotDialogTitle">
@@ -318,12 +331,12 @@
       <header class="recovery-dialog-head">
         <div>
           <span class="dialog-kicker">本機復原</span>
-          <h2 id="snapshotDialogTitle">復原點</h2>
+          <h2 id="snapshotDialogTitle">找回之前的小滴</h2>
         </div>
         <button id="snapshotDialogClose" class="recovery-dialog-close" type="button" aria-label="關閉復原點">×</button>
       </header>
       <div id="snapshotList" class="snapshot-list"></div>
-      <p class="settings-footnote">還原前會再自動保留目前狀態，因此就算選錯也還有退路。</p>
+      <p class="settings-footnote">還原前會先保存目前的紀錄，方便需要時找回。</p>
     </div>
   </dialog>
 
@@ -344,7 +357,7 @@
   <script src="./storage.js?v=storage-v1"></script>
   <script src="./cloud.js?v=auth-v1"></script>
   <script src="./account.js?v=auth-v1"></script>
-  <script src="./settings.js?v=auth-v1"></script>
-  <script src="./account-ui.js?v=auth-v3"></script>
+  <script src="./settings.js?v=ui-v2"></script>
+  <script src="./account-ui.js?v=ui-v2"></script>
 </body>
 </html>
