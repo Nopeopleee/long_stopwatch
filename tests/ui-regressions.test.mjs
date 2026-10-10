@@ -6,9 +6,10 @@ const read = path => readFileSync(new URL("../" + path, import.meta.url), "utf8"
 
 test("Each milestone has its own progress bar from zero to 100%", () => {
   const source = read("app.js");
-  const match = source.match(/function milestoneProgressPercent\\(elapsed, milestones = milestoneDefs\\)\\{[\\s\\S]*?\\n\\}/);
-  assert.ok(match, "Test the same progress helper used in the actual app");
-  const progress = new Function("return (" + match[0] + ")")();
+  const start = source.indexOf("function milestoneProgressPercent(");
+  const end = source.indexOf("\n}\n", start);
+  assert.ok(start >= 0 && end > start, "Test the same progress helper used in the actual app");
+  const progress = new Function("return (" + source.slice(start, end + 2) + ")")();
   const goals = [{ at: 3600 }, { at: 21600 }, { at: 43200 }, { at: 86400 }];
   const examples = [
     [0, 0], [1800, 50], [3600, 0], [12600, 50],
