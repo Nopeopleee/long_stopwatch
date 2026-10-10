@@ -229,7 +229,7 @@ npx wrangler secret put PUSH_VAPID_SUBJECT
 
 Cloudflare Cron 採用 UTC 時區。Workers Free 可使用 Cron Triggers，這份設定每 15 分鐘執行一次 `scheduled()`，每輪最多處理 10 個訂閱以控制免費方案的 CPU／請求上限。不需要另外架 SMTP 或定時服務。Cloudflare Cron 設定可能需要數分鐘才生效。
 
-**4. 在裝置上測試**：正式 HTTPS 站登入滴歲，至「設定 → 通知提醒」按「開啟餵食提醒」，允許瀏覽器通知。若小滴已可以餵食，等下一輪排程；點推播會回到首頁。每台裝置都要自行開啟一次，關閉通知後不會再收到該裝置的提醒。推播設定端點 `GET /api/push/config` 只公開 VAPID **公鑰**與啟用狀態；驗證訂閱、註冊與取消訂閱 API 都需要登入和同來源請求。
+**4. 在裝置上測試**：正式 HTTPS 站登入滴歲，至「設定 → 通知提醒」按「開啟餵食提醒」，允許瀏覽器通知。接著可以按「傳送測試通知」立即檢查裝置是否能收到（**同一裝置每兩分鐘最多一次**），不必等滿 12 小時。若小滴已可以餵食，等下一輪排程；點推播會回到首頁。每台裝置都要自行開啟一次，關閉通知後不會再收到該裝置的提醒。推播設定端點 `GET /api/push/config` 只公開 VAPID **公鑰**與啟用狀態；驗證訂閱、註冊與取消訂閱 API 都需要登入和同來源請求。
 
 **相容性**：Android Chrome、桌面 Chrome／Edge／Firefox 等支援 Web Push 的瀏覽器可使用；iPhone/iPad（iOS 16.4 起）通常需先透過 Safari「加入主畫面」，再從主畫面開啟的 PWA 才能訂閱。系統拒絕通知權限、離線、節能或瀏覽器清除訂閱，都可能造成推播無法送達。通知是輔助提醒，不影響餵食實際紀錄。
 
@@ -241,6 +241,7 @@ Cloudflare Cron 採用 UTC 時區。Workers Free 可使用 Cron Triggers，這�
 | POST | `/api/push/status` | 查詢目前帳號在這台裝置的訂閱狀態 |
 | POST | `/api/push/subscribe` | 明確同意後註冊目前裝置的推播訂閱 |
 | POST | `/api/push/unsubscribe` | 取消目前裝置的推播訂閱 |
+| POST | `/api/push/test` | 僅向目前登入帳號的訂閱裝置發送低頻測試通知 |
 
 所有管理端點均需要帳號 Session；非 GET 使用同來源限制。Worker 僅儲存必要的端點與瀏覽器提供的加密公鑰，並限制裝置數量、端點主機及推播重試頻率。過期的推播訂閱（服務回傳 404／410）會自動清理。
 
