@@ -259,7 +259,7 @@ function updateCloudStatus(){
 cloudBindBtn?.addEventListener("click",async()=>{
   const state=loadState();
   if(window.DisuiAccount?.bound(state)){alert("這隻小滴已由帳號保存，不需要再使用舊版備份。");return;}
-   if(!confirm("確定要使用舊版方式備份這隻小滴嗎？如果已經有帳號，建議直接使用帳號保存。"))return;
+  if(!confirm("確定要使用舊版方式備份這隻小滴嗎？如果已經有帳號，建議直接使用帳號保存。"))return;
   cloudBindBtn.disabled=true;
   try{
     if(window.DisuiStorage)await DisuiStorage.createSnapshot(state,"before-cloud-bind",{force:true});
@@ -277,12 +277,12 @@ cloudRestoreBtn?.addEventListener("click",async()=>{
   try{
     const restore=await DisuiCloud.restore(id,token);
     const previous=loadState();
-    if(previous.startedAt&&!confirm("此操作會用雲端寵物取代目前畫面上的本機寵物。原本資料將先建立本機快照，確定繼續嗎？"))return;
+    if(previous.startedAt&&!confirm("要用以前備份的小滴取代這台裝置目前的小滴嗎？系統會先幫你保存原本的紀錄。"))return;
     if(window.DisuiStorage&&previous.startedAt)await DisuiStorage.createSnapshot(previous,"before-cloud-restore",{force:true});
     saveState(restore.state);
     restore.bind();
     localStorage.removeItem(CARE_DEBUG_KEY);
-    alert("雲端還原完成！即將返回首頁。");
+    alert("小滴已找回！即將返回首頁。");
     location.href="./";
   }catch(error){alert(`還原失敗：${error.message}`)}
 });
@@ -291,7 +291,7 @@ cloudCopyBtn?.addEventListener("click",async()=>{
   const b=DisuiCloud.active(state);
   if(!b)return;
   try{
-    await navigator.clipboard.writeText(`滴歲舊版還原資訊\\n寵物編號: ${b.id}\\n還原碼: ${b.token}`);
+    await navigator.clipboard.writeText(`滴歲舊版還原資訊\n寵物編號: ${b.id}\n還原碼: ${b.token}`);
     alert("還原資訊已複製。請保存到安全的地方。");
   }catch{alert("複製失敗；瀏覽器可能不允許存取剪貼簿")}
 });
@@ -302,7 +302,7 @@ cloudRotateBtn?.addEventListener("click",async()=>{
     await DisuiCloud.rotate(state);
     updateCloudStatus();
     alert("還原碼已更新，請記得複製並保存新的還原資訊。");
-  }catch(error){alert(`密鑰輪替失敗：${error.message}`)}
+  }catch(error){alert(`更新還原碼失敗：${error.message}`)}
 });
 updateCloudStatus();
 
