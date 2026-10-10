@@ -1,10 +1,10 @@
-const CACHE="disui-v31";
+const CACHE="disui-v32";
 const LEGACY_STATIC_HOST=self.location.hostname.endsWith(".github.io")||["localhost","127.0.0.1","::1"].includes(self.location.hostname);
 const SETTINGS_PAGE=LEGACY_STATIC_HOST?"./settings.html":"./settings";
 const PRECACHE=[
   "./",
   SETTINGS_PAGE,
-  "./styles.css?v=ui-v2",
+  "./styles.css?v=ui-v3",
   "./journey.css?v=journey-v2",
   "./share.css?v=share-v1",
   "./mascot.css?v=care-v2",
@@ -14,7 +14,7 @@ const PRECACHE=[
   "./account.js?v=auth-v1",
   "./account-ui.js?v=ui-v2",
   "./account.css?v=auth-v1",
-  "./app.js?v=ui-v2",
+  "./app.js?v=ui-v3",
   "./share-card.js?v=debug-v2",
   "./settings.js?v=ui-v2",
   "./manifest.webmanifest",
