@@ -216,15 +216,24 @@
     }
     try {
       config = await client.config();
+      if (!config.authSchemaReady) {
+        guest.hidden = false;
+        submit.disabled = true;
+        $("accountResendBtn").disabled = true;
+        $("accountForgotBtn").disabled = true;
+        setMessage("帳號資料庫尚未就緒");
+        providerHint.textContent = "尚未套用 D1 帳號資料表，請先執行：npx wrangler d1 migrations apply disui-db --remote。";
+        return;
+      }
       if (!config.emailEnabled) {
         submit.disabled = true;
         $("accountResendBtn").disabled = true;
         $("accountForgotBtn").disabled = true;
       }
       providerHint.textContent = config.googleClientId
-        ? "Google 登入已就緒。"
+        ? "Google Client ID 已設定。"
         : "Google 登入待設定 Client ID。" +
-          (config.emailEnabled ? " Email 註冊已就緒。" : " Email 寄信服務也尚未設定。");
+          (config.emailEnabled ? " Resend 金鑰已設定，寄件網域仍須完成驗證。" : " Email 寄信服務尚未設定。");
       await refresh();
       await loadGoogle();
     } catch (error) {
