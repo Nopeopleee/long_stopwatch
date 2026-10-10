@@ -10,7 +10,7 @@ const els={
   title:$("title"),statusPill:$("statusPill"),days:$("days"),hours:$("hours"),minutes:$("minutes"),seconds:$("seconds"),
   startedAtText:$("startedAtText"),rankText:$("rankText"),startBtn:$("startBtn"),renameBtn:$("renameBtn"),
   careStrip:$("careStrip"),careHint:$("careHint"),careFeedCount:$("careFeedCount"),feedBtn:$("feedBtn"),feedBtnLabel:$("feedBtnLabel"),
-  milestoneSummary:$("milestoneSummary"),milestoneCount:$("milestoneCount"),milestoneProgress:$("milestoneProgress"),milestones:$("milestones"),
+  milestoneSummary:$("milestoneSummary"),milestoneCount:$("milestoneCount"),milestoneProgress:$("milestoneProgress"),milestoneProgressTrack:$("milestoneProgressTrack"),milestones:$("milestones"),
   recentMilestoneIcon:$("recentMilestoneIcon"),recentMilestoneTitle:$("recentMilestoneTitle"),recentMilestoneMeta:$("recentMilestoneMeta"),
   nextMilestoneIcon:$("nextMilestoneIcon"),nextMilestoneTitle:$("nextMilestoneTitle"),nextMilestoneMeta:$("nextMilestoneMeta"),
   milestoneToggle:$("milestoneToggle"),milestoneToggleText:$("milestoneToggleText"),milestoneArchive:$("milestoneArchive"),
@@ -478,14 +478,37 @@ function updateClock(elapsed=getElapsed()){
   els.seconds.textContent=pad2(daySeconds%60);
 }
 function updateRank(elapsed=getElapsed()){els.rankText.textContent=rankForElapsed(elapsed)}
+
+// The bar represents cumulative progress across all milestones, not just the
+// current interval. This makes the fill monotonic at unlock boundaries.
+function milestoneProgressPercent(elapsed, milestones = milestoneDefs){
+  if(!milestones.length)return 0;
+  const nextIndex=milestones.findIndex(m=>elapsed<m.at);
+  if(nextIndex<0)return 100;
+  const lower=nextIndex===0?0:milestones[nextIndex-1].at;
+  const upper=milestones[nextIndex].at;
+  const fraction=Math.max(0,Math.min(1,(elapsed-lower)/(upper-lower)));
+  return Math.max(0,Math.min(100,(nextIndex+fraction)/milestones.length*100));
+}
+let lastPaintedMilestoneProgress=null;
+function paintMilestoneProgress(elapsed){
+  const percent=milestoneProgressPercent(elapsed);
+  if(lastPaintedMilestoneProgress===null||Math.abs(percent-lastPaintedMilestoneProgress)>=.012||
+      (percent===0&&lastPaintedMilestoneProgress!==0)||(percent===100&&lastPaintedMilestoneProgress!==100)){
+    els.milestoneProgress.style.width=`${percent.toFixed(4)}%`;
+    lastPaintedMilestoneProgress=percent;
+  }
+  const displayValue=String(Math.round(percent));
+  if(els.milestoneProgressTrack?.getAttribute("aria-valuenow")!==displayValue)
+    els.milestoneProgressTrack?.setAttribute("aria-valuenow",displayValue);
+}
 function updateMilestones(elapsed=getElapsed(),{animateUnlock=true}={}){
   const resolvedDoneCount=milestoneCountForElapsed(elapsed);
   const next=milestoneDefs[resolvedDoneCount]??null;
-  const prevAt=resolvedDoneCount===0?0:milestoneDefs[resolvedDoneCount-1].at;
-  const progress=next?Math.max(0,Math.min(100,(elapsed-prevAt)/(next.at-prevAt)*100)):100;
-
   els.milestoneCount.textContent=`${resolvedDoneCount} / ${milestoneDefs.length}`;
-  els.milestoneProgress.style.width=`${progress}%`;
+  paintMilestoneProgress(elapsed);
+  els.milestoneProgressTrack?.setAttribute("aria-valuetext",
+    `已完成 ${resolvedDoneCount} 個，共 ${milestoneDefs.length} 個里程碑`);
   updateJourneyGlance(elapsed,resolvedDoneCount,next);
 
   if(!state.startedAt)els.milestoneSummary.textContent="旅程會從第一滴開始。";
@@ -553,6 +576,7 @@ function tickClock(){
   if(!state.startedAt)return;
   const elapsed=getElapsed();
   updateClock(elapsed);
+  paintMilestoneProgress(elapsed);
   const currentMilestoneCount=milestoneCountForElapsed(elapsed);
   if(currentMilestoneCount!==lastMilestoneCount){
     updateRank(elapsed);
