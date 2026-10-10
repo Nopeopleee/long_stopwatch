@@ -314,6 +314,55 @@ test("Retry delayed errors, device limit and account boundaries", async () => {
   }
 });
 
+test("Test push is user-only, rate-limited and independent of feeding cycle", async () => {
+  const { db, sqlite } = dbFixture();
+  const e = env(db);
+  const alice = userAndPet(sqlite);
+  const bob = userAndPet(sqlite, { userId: "user-two", email: "b@example.org" });
+  const device = await browserSubscription();
+  const original = globalThis.fetch;
+  let delivered = 0;
+  globalThis.fetch = async () => {
+    delivered++;
+    return new Response(null, { status: 201 });
+  };
+  try {
+    assert.equal((await api(e, "/api/push/test", {
+      cookie: alice.cookie, data: { endpoint: device.payload.endpoint }
+    })).status, 404);
+    assert.equal((await api(e, "/api/push/subscribe", {
+      cookie: alice.cookie, data: device.payload
+    })).status, 200);
+    const invalidOrigin = await api(e, "/api/push/test", {
+      cookie: alice.cookie, data: { endpoint: device.payload.endpoint }, originHeader: false
+    });
+    assert.equal(invalidOrigin.status, 403);
+    assert.equal((await api(e, "/api/push/test", {
+      cookie: bob.cookie, data: { endpoint: device.payload.endpoint }
+    })).status, 404);
+    const sent = await api(e, "/api/push/test", {
+      cookie: alice.cookie, data: { endpoint: device.payload.endpoint }
+    });
+    assert.equal(sent.status, 200);
+    assert.equal(sent.body.sent, true);
+    assert.equal(delivered, 1);
+    const again = await api(e, "/api/push/test", {
+      cookie: alice.cookie, data: { endpoint: device.payload.endpoint }
+    });
+    assert.equal(again.status, 429);
+    assert.equal(delivered, 1);
+    // Test notifications should not mark a feeding cycle as already notified.
+    const stored = sqlite.prepare(
+      "SELECT last_test_at, last_sent_feed_at FROM push_subscriptions"
+    ).get();
+    assert.ok(stored.last_test_at > 0);
+    assert.equal(stored.last_sent_feed_at, null);
+  } finally {
+    globalThis.fetch = original;
+    sqlite.close();
+  }
+});
+
 test("Cron is wired into Worker and Service Worker visibly displays incoming push", () => {
   const wrangler = JSON.parse(readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8"));
   assert.deepEqual(wrangler.triggers.crons, ["*/15 * * * *"]);
@@ -324,5 +373,10 @@ test("Cron is wired into Worker and Service Worker visibly displays incoming pus
   assert.ok(!source.includes("event.data.url"));
   const settings = readFileSync(new URL("../settings.html", import.meta.url), "utf8");
   assert.ok(settings.includes('id="pushToggle"'));
+  assert.ok(settings.includes('id="pushTest"'));
+  const client = readFileSync(new URL("../push-ui.js", import.meta.url), "utf8");
+  assert.ok(client.includes('toggle.addEventListener("click"'));
+  assert.ok(client.includes("Notification.requestPermission()"));
+  assert.ok(client.includes('testButton?.addEventListener("click"'));
   assert.ok(settings.includes("滿 12 小時"));
 });
