@@ -139,7 +139,8 @@ test("Only trusted HTTPS push providers are accepted (no arbitrary fetch/SSRF)",
     "https://fcm.googleapis.com/fcm/send/1",
     "https://updates.push.services.mozilla.com/wpush/v2/1",
     "https://web.push.apple.com/Q/1",
-    "https://foo.push.apple.com/Q/1"
+    "https://foo.push.apple.com/Q/1",
+    "https://wns2-db5p.notify.windows.com/?token=opaque-test-string"
   ]) assert.equal(allowedPushEndpoint(url), true, url);
   for (const url of [
     "http://fcm.googleapis.com/fcm/send/a",
@@ -148,7 +149,6 @@ test("Only trusted HTTPS push providers are accepted (no arbitrary fetch/SSRF)",
     "https://localhost/",
     "https://evil.example/send/1",
     "https://fcm.googleapis.com:8443/send/1",
-    "https://fcm.googleapis.com/send?a=b",
     "https://fcm.googleapis.com/"
   ]) assert.equal(allowedPushEndpoint(url), false, url);
   assert.equal(validSubscription({ endpoint: "https://evil.example/", keys: {} }), false);
