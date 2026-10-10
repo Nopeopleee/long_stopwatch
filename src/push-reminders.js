@@ -83,6 +83,44 @@ export async function handlePushApi(request, env, path) {
       ).bind(input.endpoint, user.id, input.keys.p256dh, input.keys.auth, now, now).run();
       return authJson({ subscribed: true });
     }
+    if (path === "/api/push/test") {
+      if (!pushConfigured(env)) return authJson({ error: "通知功能暫時無法使用" }, 503);
+      if (!allowedPushEndpoint(input.endpoint)) return authJson({ error: "裝置通知資料無效" }, 400);
+      const now = Date.now();
+      // At most one test alert per two minutes per account-owned device.
+      const claimed = await env.DB.prepare(
+        `UPDATE push_subscriptions SET last_test_at=?
+         WHERE endpoint=? AND user_id=? AND enabled=1
+           AND (last_test_at IS NULL OR last_test_at <= ?)`
+      ).bind(now, input.endpoint, user.id, now - 2 * 60 * 1000).run();
+      if (claimed.meta.changes !== 1) {
+        const record = await env.DB.prepare(
+          "SELECT last_test_at FROM push_subscriptions WHERE endpoint=? AND user_id=? AND enabled=1"
+        ).bind(input.endpoint, user.id).first();
+        return record
+          ? authJson({ error: "剛剛已送過測試通知，請兩分鐘後再試" }, 429)
+          : authJson({ error: "請先在這台裝置開啟提醒" }, 404);
+      }
+      const sub = await env.DB.prepare(
+        "SELECT p256dh, auth_secret FROM push_subscriptions WHERE endpoint=? AND user_id=?"
+      ).bind(input.endpoint, user.id).first();
+      const status = await sendWebPush({
+        endpoint: input.endpoint, p256dh: sub.p256dh, auth_secret: sub.auth_secret
+      }, env, {
+        title: "滴歲的通知測試 💧",
+        body: "這台裝置已經準備好接收小滴的餵食提醒！",
+        tag: "disui-feeding",
+        url: "/"
+      }, now);
+      if (status === 404 || status === 410) {
+        await env.DB.prepare(
+          "DELETE FROM push_subscriptions WHERE endpoint=? AND user_id=?"
+        ).bind(input.endpoint, user.id).run();
+        return authJson({ error: "裝置的提醒設定已失效，請重新開啟" }, 410);
+      }
+      if (status < 200 || status >= 300) return authJson({ error: "測試通知未能送出，請稍後再試" }, 502);
+      return authJson({ sent: true });
+    }
     if (path === "/api/push/unsubscribe") {
       if (!allowedPushEndpoint(input.endpoint)) return authJson({ error: "通知資料格式不正確" }, 400);
       await env.DB.prepare(
