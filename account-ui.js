@@ -16,6 +16,17 @@
   let googleReady = false, pending = false, resetToken = null;
 
   function setMessage(text) { if (status) status.textContent = text; }
+  function setFooter(user) {
+    const note = $("settingsFooterNote");
+    if (note) note.textContent = user
+      ? "小滴的紀錄已連結你的帳號，可以在其他裝置登入後繼續照顧。"
+      : "沒有登入時，小滴的紀錄會保存在這台裝置。記得定期下載備份。";
+  }
+  function friendlyError(error) {
+    if (error?.status === 429) return "操作太頻繁了，請稍後再試。";
+    if (error?.status >= 500 || !error?.status) return "暫時無法完成操作，請稍後再試。";
+    return error?.message || "操作失敗，請再試一次。";
+  }
   function setMode(value) {
     mode = value;
     loginMode.classList.toggle("is-active", value === "login");
@@ -45,14 +56,15 @@
       user = profile.user;
       guest.hidden = !!user;
       signed.hidden = !user;
+      setFooter(user);
       if (!user) {
-        setMessage("尚未登入。可以先使用本機滴歲。");
+        setMessage("尚未登入，仍然可以先照顧這台裝置上的小滴。");
         return;
       }
       setMessage(`已登入：${user.email}`);
       $("accountUserInfo").textContent = user.googleLinked
-        ? `${user.email} · Google 已連結`
-        : `${user.email} · Email 已驗證`;
+        ? `${user.email} · 已連結 Google`
+        : `${user.email} · 信箱已驗證`;
       linkWrap.hidden = user.googleLinked || !config?.googleClientId;
       const response = await client.pet();
       accountPet = response.pet;
@@ -65,7 +77,7 @@
       createBtn.hidden = !!accountPet;
       claimBtn.hidden = !!accountPet || !window.DisuiCloud?.active(local);
     } catch (error) {
-      setMessage(`帳號狀態取得失敗：${error.message}`);
+      setMessage("目前無法確認登入狀態，請稍後再試。");
     }
   }
   async function action(task) {
@@ -73,8 +85,8 @@
     pending = true;
     submit.disabled = true;
     try { await task(); }
-    catch (error) { alert(error.message || "操作失敗"); }
-    finally { pending = false; submit.disabled = false; }
+    catch (error) { alert(friendlyError(error)); }
+    finally { pending = false; submit.disabled = !config?.emailEnabled; }
   }
 
   form?.addEventListener("submit", event => {
@@ -121,7 +133,7 @@
     const initial = local.startedAt ? local.name : "我的滴歲";
     const name = prompt("替帳號的新滴歲取名字（最多 32 字）", initial);
     if (!name) return;
-    if (local.startedAt && !await protectLocal("建立新的伺服器出生滴歲，並在這台裝置切換過去？")) return;
+    if (local.startedAt && !await protectLocal("養一隻新的小滴，並在這台裝置切換過去？")) return;
     const data = await client.createPet(name.trim());
     client.restore(data.pet);
     localStorage.removeItem("disui-care-debug-v1");
@@ -131,7 +143,7 @@
     const local = loadState();
     const binding = window.DisuiCloud?.active(local);
     if (!binding) return;
-    if (!confirm("確定把這隻滴歲綁定到登入帳號嗎？原本的 Owner Token 將立即失效，之後使用帳號登入取回。")) return;
+    if (!confirm("要把以前的小滴帶到這個帳號嗎？完成後，之前的舊版還原碼將不能再使用。")) return;
     const data = await client.claim(binding.id, binding.token);
     client.restore(data.pet);
     localStorage.removeItem("disui-care-debug-v1");
@@ -164,7 +176,8 @@
       google.accounts.id.renderButton(googleLink, { ...options, text: "continue_with" });
     } catch {
       googleReady = false;
-      providerHint.textContent = "Google 登入元件暫時無法載入。";
+      providerHint.hidden = false;
+      providerHint.textContent = "Google 登入暫時無法使用，可以先用 Email 登入。";
     }
   }
 
@@ -210,7 +223,7 @@
     await consumeEmailLink();
     if (!client.secure()) {
       guest.hidden = false;
-      setMessage("帳號功能請使用正式 HTTPS 網站");
+      setMessage("請在滴歲的正式網站使用帳號功能。");
       submit.disabled = true;
       return;
     }
@@ -221,8 +234,9 @@
         submit.disabled = true;
         $("accountResendBtn").disabled = true;
         $("accountForgotBtn").disabled = true;
-        setMessage("帳號資料庫尚未就緒");
-        providerHint.textContent = "尚未套用 D1 帳號資料表，請先執行：npx wrangler d1 migrations apply disui-db --remote。";
+        setMessage("帳號功能暫時無法使用");
+        providerHint.hidden = false;
+        providerHint.textContent = "目前暫時無法登入或註冊，請稍後再試。";
         return;
       }
       if (!config.emailEnabled) {
@@ -230,27 +244,18 @@
         $("accountResendBtn").disabled = true;
         $("accountForgotBtn").disabled = true;
       }
-      const hints = [];
-      if (config.googleConfigInvalid) {
-        hints.push("Google 憑證格式錯誤：請使用結尾為 .apps.googleusercontent.com 的 Client ID，不要填入 Client Secret。");
-      } else if (config.googleClientId) {
-        hints.push("Google Client ID 已設定。");
-      } else {
-        hints.push("Google 登入待設定 Client ID。");
-      }
-      if (!config.passwordPepperConfigured) {
-        hints.push("Email 密碼登入需要在 Worker 設定 AUTH_PASSWORD_PEPPER。");
-      } else if (config.emailEnabled) {
-        hints.push("Email 服務已設定，寄件網域仍須完成驗證。");
-      } else {
-        hints.push("Email 寄信服務尚未設定。");
-      }
-      providerHint.textContent = hints.join(" ");
+      const unavailable = [];
+      if (!config.googleClientId) unavailable.push("Google 登入");
+      if (!config.emailEnabled) unavailable.push("Email 登入");
+      providerHint.hidden = unavailable.length === 0;
+      providerHint.textContent = unavailable.length
+        ? unavailable.join("、") + "暫時無法使用，請稍後再試。"
+        : "";
       await refresh();
       await loadGoogle();
     } catch (error) {
       guest.hidden = false;
-      setMessage(`帳號服務不可用：${error.message}`);
+      setMessage("帳號服務暫時無法使用，請稍後再試。");
     }
   }
   init();
