@@ -10,6 +10,7 @@
   let signedIn = false;
   let subscribed = false;
   let busy = false;
+  let lastError = "";
   const supported = () => client.secure() && "serviceWorker" in navigator &&
     "PushManager" in window && "Notification" in window;
 
@@ -34,6 +35,9 @@
     } else if (!config?.available) {
       message("提醒功能暫時無法使用");
       note.textContent = "請稍後再試。";
+    } else if (lastError) {
+      message(lastError);
+      note.textContent = "請確認網路連線後再試一次。";
     } else {
       message(subscribed ? "這台裝置已開啟餵食提醒" : "這台裝置尚未開啟提醒");
       note.textContent = "小滴滿 12 小時可以餵食時提醒一次；餵食後重新計算。每台裝置可以自行開關。";
@@ -42,11 +46,12 @@
 
   async function existingSubscription() {
     if (!supported()) return null;
-    const registration = await navigator.serviceWorker.ready;
-    return registration.pushManager.getSubscription();
+    const registration = await navigator.serviceWorker.getRegistration("./");
+    return registration ? registration.pushManager.getSubscription() : null;
   }
   async function check() {
     if (busy) return;
+    lastError = "";
     try {
       const user = await client.me();
       signedIn = !!user.user;
@@ -60,7 +65,7 @@
         }
       }
     } catch {
-      message("暫時無法取得提醒狀態，請稍後重試");
+      lastError = "暫時無法確認提醒狀態";
     }
     paint();
   }
@@ -83,7 +88,9 @@
     // Safari/iOS treats it as a user-initiated request.
     const permission = await Notification.requestPermission();
     if (permission !== "granted") { paint(); return; }
-    const registration = await navigator.serviceWorker.ready;
+    let registration = await navigator.serviceWorker.getRegistration("./");
+    if (!registration) registration = await navigator.serviceWorker.register("./sw.js", { scope: "./" });
+    if (!registration.active) registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
     if (subscription && !sameKey(subscription, config.publicKey)) {
       await subscription.unsubscribe();
@@ -121,12 +128,13 @@
     // Permissions must be requested synchronously in this gesture; turnOn
     // starts with requestPermission before awaiting a network request.
     busy = true;
+    lastError = "";
     toggle.disabled = true;
     try {
       if (subscribed) await turnOff();
       else await turnOn();
     } catch (error) {
-      message(error?.status === 409 ? "這個帳號已達通知裝置數量上限" : "開關通知失敗，請再試一次");
+      lastError = error?.status === 409 ? "這個帳號已達通知裝置數量上限" : "開關通知失敗，請再試一次";
     } finally {
       busy = false;
       paint();
