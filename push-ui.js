@@ -2,6 +2,7 @@
   "use strict";
   const client = window.DisuiAccount;
   const toggle = document.getElementById("pushToggle");
+  const testButton = document.getElementById("pushTest");
   const status = document.getElementById("pushStatus");
   const note = document.getElementById("pushHelp");
   if (!client || !toggle || !status) return;
@@ -11,6 +12,7 @@
   let subscribed = false;
   let busy = false;
   let lastError = "";
+  let resultMessage = "";
   const supported = () => client.secure() && "serviceWorker" in navigator &&
     "PushManager" in window && "Notification" in window;
 
@@ -20,6 +22,10 @@
     toggle.disabled = busy || !signedIn || !supported() || !config?.available ||
       (Notification.permission === "denied");
     toggle.textContent = subscribed ? "關閉餵食提醒" : "開啟餵食提醒";
+    if (testButton) {
+      testButton.hidden = !signedIn || !subscribed;
+      testButton.disabled = busy || !signedIn || !subscribed || !config?.available;
+    }
     toggle.classList.toggle("primary", !subscribed);
     if (!signedIn) {
       message("登入帳號後就能開啟提醒");
@@ -38,6 +44,9 @@
     } else if (lastError) {
       message(lastError);
       note.textContent = "請確認網路連線後再試一次。";
+    } else if (resultMessage) {
+      message(resultMessage);
+      note.textContent = "提醒會在小滴滿 12 小時可以餵食時自動送出。";
     } else {
       message(subscribed ? "這台裝置已開啟餵食提醒" : "這台裝置尚未開啟提醒");
       note.textContent = "小滴滿 12 小時可以餵食時提醒一次；餵食後重新計算。每台裝置可以自行開關。";
@@ -52,6 +61,7 @@
   async function check() {
     if (busy) return;
     lastError = "";
+    resultMessage = "";
     try {
       const user = await client.me();
       signedIn = !!user.user;
@@ -129,12 +139,34 @@
     // starts with requestPermission before awaiting a network request.
     busy = true;
     lastError = "";
+    resultMessage = "";
     toggle.disabled = true;
     try {
       if (subscribed) await turnOff();
       else await turnOn();
     } catch (error) {
       lastError = error?.status === 409 ? "這個帳號已達通知裝置數量上限" : "開關通知失敗，請再試一次";
+    } finally {
+      busy = false;
+      paint();
+    }
+  });
+
+  testButton?.addEventListener("click", async () => {
+    if (busy || !signedIn || !subscribed) return;
+    busy = true;
+    lastError = "";
+    resultMessage = "";
+    paint();
+    try {
+      const subscription = await existingSubscription();
+      if (!subscription) throw new Error("No active push subscription");
+      await client.pushTest(subscription.endpoint);
+      resultMessage = "測試通知已送出，請查看裝置通知";
+    } catch (error) {
+      lastError = error?.status === 429
+        ? "剛剛已送過測試通知，請兩分鐘後再試"
+        : "測試通知未送出，請稍後再試";
     } finally {
       busy = false;
       paint();
