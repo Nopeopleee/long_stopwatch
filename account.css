@@ -20,3 +20,9 @@
 .account-panel > .btn { width: 100%; }
 @media (max-width: 380px) { .account-panel { padding: 12px; } .account-inline-actions { gap: 12px; } }
 @media (prefers-reduced-motion: reduce) { .account-tab { transition: none; } }
+
+/* Notification permission is never requested until the user presses the button. */
+.push-controls{padding:0 17px 16px;display:grid;gap:7px}
+.push-controls .btn{width:100%;min-height:44px}
+.push-controls .btn:disabled{opacity:.57;cursor:not-allowed}
+.push-controls .settings-footnote{margin:3px 3px 0;line-height:1.5}
