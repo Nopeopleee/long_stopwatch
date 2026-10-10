@@ -105,11 +105,17 @@ button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{ou
 .milestone-head h2{margin:0;font-size:clamp(1.4rem,3vw,1.9rem);letter-spacing:-.035em}
 .milestone-summary{margin:7px 0 0;color:var(--muted);font-size:.85rem;line-height:1.45}
 .milestone-count{padding:8px 11px;border:1px solid var(--stroke);border-radius:999px;background:var(--soft);color:var(--muted);font-size:.78rem;font-weight:720;font-variant-numeric:tabular-nums}
-/* The fill represents the whole journey, so unlocking a milestone never
-   animates backwards from 100% to zero. No perpetual shimmer on tiny fills. */
-.milestone-progress{height:7px;margin:20px 0 18px;border-radius:999px;background:var(--soft-strong);overflow:hidden;isolation:isolate}
-.milestone-progress>span{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5acfff,#76ebd0,#9ba8ff);box-shadow:0 0 18px rgba(95,218,255,.24);transition:width .65s cubic-bezier(.22,.8,.22,1);will-change:width}
-@media(prefers-reduced-motion:reduce){.milestone-progress>span{transition:none;will-change:auto}}
+/* Each milestone fills the track independently from 0% to 100%.
+   Keep the travelling highlight on the *track*, not on the partially filled
+   child: otherwise the shimmer stops at the current fill width. */
+.milestone-progress{position:relative;height:7px;margin:20px 0 18px;border-radius:999px;background:var(--soft-strong);overflow:hidden;isolation:isolate}
+.milestone-progress>span{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5acfff,#76ebd0,#9ba8ff);box-shadow:0 0 18px rgba(95,218,255,.24);transition:width .45s cubic-bezier(.22,.8,.22,1)}
+.milestone-progress>span.is-milestone-reset{transition:none}
+/* Shine width = 40% of track; the 350% translation moves it from -40%
+   to +100%, fully across and outside both ends of the track. */
+.milestone-progress::after{content:"";position:absolute;z-index:1;top:0;bottom:0;left:-40%;width:40%;border-radius:inherit;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12) 23%,rgba(255,255,255,.68) 50%,rgba(255,255,255,.12) 77%,transparent);animation:milestoneShine 3.6s linear infinite}
+@keyframes milestoneShine{0%{transform:translateX(0)}70%,100%{transform:translateX(350%)}}
+@media(prefers-reduced-motion:reduce){.milestone-progress>span{transition:none}.milestone-progress::after{animation:none;display:none}}
 .milestones{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .milestone{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:76px;padding:12px 13px;border:1px solid var(--stroke);border-radius:18px;background:var(--soft);transition:transform .18s ease,border-color .18s ease,background .18s ease}
 .milestone:hover{transform:translateY(-2px);border-color:var(--stroke-strong);background:var(--soft-strong)}

@@ -479,20 +479,32 @@ function updateClock(elapsed=getElapsed()){
 }
 function updateRank(elapsed=getElapsed()){els.rankText.textContent=rankForElapsed(elapsed)}
 
-// The bar represents cumulative progress across all milestones, not just the
-// current interval. This makes the fill monotonic at unlock boundaries.
+// Progress belongs to the *current* milestone. It starts at 0% again
+// when a milestone unlocks, instead of representing all 17 milestones at once.
 function milestoneProgressPercent(elapsed, milestones = milestoneDefs){
   if(!milestones.length)return 0;
   const nextIndex=milestones.findIndex(m=>elapsed<m.at);
   if(nextIndex<0)return 100;
   const lower=nextIndex===0?0:milestones[nextIndex-1].at;
   const upper=milestones[nextIndex].at;
-  const fraction=Math.max(0,Math.min(1,(elapsed-lower)/(upper-lower)));
-  return Math.max(0,Math.min(100,(nextIndex+fraction)/milestones.length*100));
+  return Math.max(0,Math.min(100,(elapsed-lower)/(upper-lower)*100));
 }
 let lastPaintedMilestoneProgress=null;
+let lastPaintedMilestoneIndex=null;
+let milestoneResetTimer=null;
 function paintMilestoneProgress(elapsed){
   const percent=milestoneProgressPercent(elapsed);
+  const nextIndex=milestoneDefs.findIndex(m=>elapsed<m.at);
+  // The 100% -> 0% milestone change is intentional, but must happen
+  // instantly rather than animating backwards across the track.
+  if(lastPaintedMilestoneIndex!==null&&nextIndex!==lastPaintedMilestoneIndex){
+    els.milestoneProgress.classList.add("is-milestone-reset");
+    clearTimeout(milestoneResetTimer);
+    milestoneResetTimer=setTimeout(()=>{
+      els.milestoneProgress.classList.remove("is-milestone-reset");
+    },90);
+  }
+  lastPaintedMilestoneIndex=nextIndex;
   if(lastPaintedMilestoneProgress===null||Math.abs(percent-lastPaintedMilestoneProgress)>=.012||
       (percent===0&&lastPaintedMilestoneProgress!==0)||(percent===100&&lastPaintedMilestoneProgress!==100)){
     els.milestoneProgress.style.width=`${percent.toFixed(4)}%`;
@@ -508,7 +520,9 @@ function updateMilestones(elapsed=getElapsed(),{animateUnlock=true}={}){
   els.milestoneCount.textContent=`${resolvedDoneCount} / ${milestoneDefs.length}`;
   paintMilestoneProgress(elapsed);
   els.milestoneProgressTrack?.setAttribute("aria-valuetext",
-    `已完成 ${resolvedDoneCount} 個，共 ${milestoneDefs.length} 個里程碑`);
+    next
+      ? `前往「${next.label}」：目前完成 ${Math.round(milestoneProgressPercent(elapsed))}%`
+      : "全部里程碑已完成");
   updateJourneyGlance(elapsed,resolvedDoneCount,next);
 
   if(!state.startedAt)els.milestoneSummary.textContent="旅程會從第一滴開始。";

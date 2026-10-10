@@ -4,44 +4,56 @@ import { readFileSync } from "node:fs";
 
 const read = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
 
-test("Milestone progress is continuous across unlock boundaries", () => {
+test("Each milestone has its own progress bar from zero to 100%", () => {
   const source = read("app.js");
-  const match = source.match(/function milestoneProgressPercent\(elapsed, milestones = milestoneDefs\)\{[\s\S]*?\n\}/);
-  assert.ok(match, "Expected to test the actual helper used by app.js");
-  const progress = new Function("return (" + match[0] + ")")();
+  const start = source.indexOf("function milestoneProgressPercent(");
+  const end = source.indexOf("\n}\n", start);
+  assert.ok(start >= 0 && end > start, "Test the same progress helper used in the actual app");
+  const progress = new Function("return (" + source.slice(start, end + 2) + ")")();
   const goals = [{ at: 3600 }, { at: 21600 }, { at: 43200 }, { at: 86400 }];
   const examples = [
-    [0, 0], [1800, 12.5], [3600, 25], [21600, 50],
-    [43200, 75], [86400, 100], [90000, 100]
+    [0, 0], [1800, 50], [3600, 0], [12600, 50],
+    [21600, 0], [32400, 50], [43200, 0],
+    [64800, 50], [86400, 100], [90000, 100]
   ];
   for (const [elapsed, expected] of examples) {
     assert.ok(Math.abs(progress(elapsed, goals) - expected) < 0.00001,
-      `progress(${elapsed}) should be ${expected}%`);
+      `progress(${elapsed}) should be ${expected}% toward the next milestone`);
   }
-  let last = -1;
-  for (let elapsed = 0; elapsed <= 90000; elapsed += 37) {
-    const next = progress(elapsed, goals);
-    assert.ok(next >= last, `Progress moved backward at ${elapsed} seconds`);
-    last = next;
+  for (let stage = 0; stage < goals.length; stage++) {
+    const start = stage ? goals[stage - 1].at : 0;
+    const end = goals[stage].at;
+    let last = -1;
+    for (let n = 0; n < 100; n++) {
+      const value = progress(start + n / 100 * (end - start), goals);
+      assert.ok(value >= last, "Progress must increase within each milestone");
+      last = value;
+    }
+    assert.ok(progress(end - 0.01, goals) > 99.9, "Progress should finish before unlocking");
+    if (stage + 1 < goals.length) {
+      assert.equal(progress(end, goals), 0, "Next milestone should restart from zero");
+    }
   }
-  for (const checkpoint of goals) {
-    const before = progress(checkpoint.at - 0.01, goals);
-    const after = progress(checkpoint.at, goals);
-    assert.ok(after >= before && after - before < 0.01,
-      "Milestone unlocking must not animate a full 100-to-0 reset");
-  }
+  assert.ok(source.includes('classList.add("is-milestone-reset")'),
+    "The intentional progress reset must not animate backwards");
+  assert.ok(source.includes('前往「${next.label}」'),
+    "Accessible label should refer to the next milestone, not the entire journey");
 });
 
-test("Progress fill has no perpetual shimmer and respects reduced motion", () => {
+test("The shimmer traverses the full track, even when its fill is short", () => {
   const css = read("styles.css");
   const html = read("index.html");
   const app = read("app.js");
   assert.ok(html.includes('id="milestoneProgressTrack"'));
   assert.ok(html.includes('role="progressbar"'));
   assert.ok(app.includes("paintMilestoneProgress(elapsed)"));
-  assert.ok(css.includes("@media(prefers-reduced-motion:reduce){.milestone-progress>span{transition:none"));
-  assert.ok(!css.includes("animation:shimmer"));
-  assert.ok(!css.includes("@keyframes shimmer"));
+  assert.ok(css.includes(".milestone-progress::after{"), "Shimmer must be on the outer track");
+  assert.ok(!css.includes(".milestone-progress>span::after"), "Shimmer must not be constrained to the filled span");
+  assert.ok(css.includes("left:-40%;width:40%"), "Start the highlight outside the track");
+  assert.ok(css.includes("translateX(350%)"), "Travel from -40% to +100% of the track");
+  assert.ok(css.includes("@keyframes milestoneShine"), "Keep the original gliding highlight");
+  assert.ok(css.includes(".milestone-progress>span.is-milestone-reset{transition:none}"));
+  assert.ok(css.includes("@media(prefers-reduced-motion:reduce){.milestone-progress>span{transition:none}.milestone-progress::after{animation:none;display:none}}"));
 });
 
 test("Everyday settings prioritize account, theme and backups while advanced tools start closed", () => {
