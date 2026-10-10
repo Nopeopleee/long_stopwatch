@@ -144,7 +144,7 @@ export async function runDuePushReminders(env, now = Date.now()) {
         tag: "disui-feeding",
         url: "/"
       }, now);
-      if (status === 201 || status === 202) {
+      if (status >= 200 && status < 300) {
         await env.DB.prepare(
           "UPDATE push_subscriptions SET last_sent_feed_at = ? WHERE endpoint=? AND user_id=? AND last_attempt_feed_at=? AND last_attempt_at=?"
         ).bind(row.feed_marker, row.endpoint, row.user_id, row.feed_marker, now).run();
