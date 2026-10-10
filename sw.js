@@ -1,4 +1,4 @@
-const CACHE="disui-v32";
+const CACHE="disui-v33";
 const LEGACY_STATIC_HOST=self.location.hostname.endsWith(".github.io")||["localhost","127.0.0.1","::1"].includes(self.location.hostname);
 const SETTINGS_PAGE=LEGACY_STATIC_HOST?"./settings.html":"./settings";
 const PRECACHE=[
@@ -11,9 +11,10 @@ const PRECACHE=[
   "./common.js?v=award-v1",
   "./storage.js?v=storage-v1",
   "./cloud.js?v=auth-v1",
-  "./account.js?v=auth-v1",
-  "./account-ui.js?v=ui-v2",
-  "./account.css?v=auth-v1",
+  "./account.js?v=push-v1",
+  "./account-ui.js?v=push-v1",
+  "./account.css?v=push-v1",
+  "./push-ui.js?v=push-v1",
   "./app.js?v=ui-v3",
   "./share-card.js?v=debug-v2",
   "./settings.js?v=ui-v2",
@@ -102,4 +103,38 @@ self.addEventListener("fetch",event=>{
   }
 
   event.respondWith(staleWhileRevalidate(request,event));
+});
+
+
+// This event can fire with no pages open. Apple requires visibly showing each
+// incoming push, so never use silent background-only notification handling.
+self.addEventListener("push", event => {
+  let payload = null;
+  try { payload = event.data?.json() || null; } catch {}
+  const title = typeof payload?.title === "string" ? payload.title.slice(0, 80) : "小滴提醒 💧";
+  const body = typeof payload?.body === "string" ? payload.body.slice(0, 180) : "小滴在等你回來看看牠！";
+  event.waitUntil(self.registration.showNotification(title, {
+    body,
+    icon: "./icons/icon-192.webp?v=icon-v2",
+    badge: "./icons/icon-192.webp?v=icon-v2",
+    tag: "disui-feeding",
+    renotify: false,
+    data: { url: "./" }
+  }));
+});
+
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  // Never navigate to a URL supplied by the push payload.
+  const target = new URL("./", self.registration.scope).href;
+  event.waitUntil((async () => {
+    const windows = await clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const windowClient of windows) {
+      if (new URL(windowClient.url).origin === self.location.origin) {
+        if ("navigate" in windowClient) await windowClient.navigate(target);
+        return windowClient.focus();
+      }
+    }
+    return clients.openWindow(target);
+  })());
 });
