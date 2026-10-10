@@ -8,10 +8,11 @@ test("Cloudflare assets include all scripts, styles, and PWA cached files", () =
   const sw = read("sw.js");
   const html = [read("index.html"), read("settings.html")].join("\n");
   const versions = {
-    "account.js": "auth-v1",
-    "account-ui.js": "ui-v2",
-    "account.css": "auth-v1",
+    "account.js": "push-v1",
+    "account-ui.js": "push-v1",
+    "account.css": "push-v1",
     "cloud.js": "auth-v1",
+    "push-ui.js": "push-v1",
     "app.js": "ui-v3",
     "settings.js": "ui-v2",
     "styles.css": "ui-v3"
@@ -38,6 +39,7 @@ test("D1 migrations remain append-only", () => {
     assert.ok(auth.includes("CREATE TABLE IF NOT EXISTS " + name), "Missing " + name);
   }
   assert.ok(read("migrations/0003_password_credentials.sql").includes("CREATE TABLE IF NOT EXISTS auth_password_credentials"));
+  assert.ok(read("migrations/0004_push_subscriptions.sql").includes("CREATE TABLE IF NOT EXISTS push_subscriptions"));
 });
 
 test("Workers production PBKDF2 single-call cap is enforced in source", () => {

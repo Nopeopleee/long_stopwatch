@@ -1,5 +1,6 @@
 import { handleAuth } from "./auth.js";
 import { handleAccountPet } from "./account-pets.js";
+import { handlePushApi, runDuePushReminders } from "./push-reminders.js";
 // Only /api/* is dispatched to this Worker before Cloudflare static assets.
 function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
@@ -194,6 +195,7 @@ export default {
     }
 
     if (pathname.startsWith("/api/auth/")) return handleAuth(request, env, pathname);
+    if (pathname.startsWith("/api/push/")) return handlePushApi(request, env, pathname);
     if (pathname === "/api/me/pet" || pathname.startsWith("/api/me/pet/")) {
       return handleAccountPet(request, env, pathname);
     }
@@ -234,5 +236,10 @@ export default {
       console.error("Pet API failed", error);
       return json({ error: "Service unavailable" }, 503);
     }
+  },
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(runDuePushReminders(env, controller.scheduledTime).catch(error => {
+      console.error("Feeding reminder job failed", error?.name || "unknown");
+    }));
   },
 };

@@ -10,7 +10,7 @@ globalThis.crypto ??= webcrypto;
 function database() {
   const sqlite = new DatabaseSync(":memory:");
   sqlite.exec("PRAGMA foreign_keys = ON");
-  for (const name of ["0001_create_pets.sql", "0002_auth_accounts.sql", "0003_password_credentials.sql"]) {
+  for (const name of ["0001_create_pets.sql", "0002_auth_accounts.sql", "0003_password_credentials.sql", "0004_push_subscriptions.sql"]) {
     sqlite.exec(readFileSync(new URL("../migrations/" + name, import.meta.url), "utf8"));
   }
   const db = {

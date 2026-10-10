@@ -70,7 +70,16 @@
     forgot: email => request("/api/auth/forgot-password", { email }),
     reset: (token, password) => request("/api/auth/reset-password", { token, password }),
     google: (credential, link = false) => request(link ? "/api/auth/google/link" : "/api/auth/google", { credential }),
-    logout: async () => { const result = await request("/api/auth/logout", {}); detach(); return result; },
+    logout: async () => {
+      // Revocation is best effort; browser unsubscribes even if the network fails.
+      await window.DisuiPush?.disableOnLogout?.().catch(() => {});
+      const result = await request("/api/auth/logout", {}); detach(); return result;
+    },
+    pushConfig: () => request("/api/push/config", undefined, "GET"),
+    pushStatus: endpoint => request("/api/push/status", { endpoint }),
+    pushSubscribe: subscription => request("/api/push/subscribe", subscription),
+    pushUnsubscribe: endpoint => request("/api/push/unsubscribe", { endpoint }),
+    pushTest: endpoint => request("/api/push/test", { endpoint }),
     pet: () => request("/api/me/pet", undefined, "GET"),
     createPet: name => request("/api/me/pet", { name }),
     claim: (id, ownerToken) => request("/api/me/pet/claim", { id, ownerToken }),
