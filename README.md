@@ -127,28 +127,31 @@ GitHub 的 Worker Builds 繼續使用 `npx wrangler deploy` 部署程式。部�
 
 ### 部署前設定（需要 Cloudflare / Google / Resend 管理權限）
 
-1. **套用第二份 Migration**：`npx wrangler d1 migrations apply disui-db --remote`。這會依序套用尚未執行的 `migrations/0002_auth_accounts.sql`；**不要原地修改已套用的 `0001_create_pets.sql`**。
-2. **Google 登入**：到 Google Cloud Console 設定 OAuth 同意畫面與「Web application」OAuth Client，將 `https://disui.noppl.cc` 加入 *Authorized JavaScript origins*。本專案採 GIS JavaScript callback，無需新增自訂 OAuth redirect callback URL。將 Client ID 設定在 Cloudflare Worker 的 `GOOGLE_CLIENT_ID` 環境變數。Client Secret **不需要**提供給此 ID Token callback 方案。
+1. **套用所有未執行 Migration**：`npx wrangler d1 migrations apply disui-db --remote`。新增 `migrations/0003_password_credentials.sql`，專為 Cloudflare Workers 的 PBKDF2 上限建立獨立密碼憑證表；若還沒套用 0002，Wrangler 會依序套用。**不要直接更改已套用的 0001／0002 SQL**。
+2. **Google 登入**：到 Google Cloud Console 設定 OAuth 同意畫面與「Web application」OAuth Client，將 `https://disui.noppl.cc` 加入 *Authorized JavaScript origins*。本專案採 GIS JavaScript callback，無需新增自訂 OAuth redirect callback URL。`GOOGLE_CLIENT_ID` 必須是通常以 `.apps.googleusercontent.com` 結尾的**Client ID**，不是以 `GOCSPX-` 開頭的 **Client Secret**。Client Secret 不需要提供給此方案；若曾誤設為 `GOOGLE_CLIENT_ID` 並經公開端點回傳，請立即到 Google Cloud 重新產生／撤銷被公開的 Secret。
 3. **Email 驗證／重設密碼**：到 <https://resend.com> 驗證寄件網域與必要 DNS（SPF/DKIM），取得 API Key。將 `RESEND_API_KEY` 與 `EMAIL_FROM`（例如 `滴歲 <noreply@你的已驗證網域>`）設為 Worker Secrets / Environment Variables。缺少這些設定時，Email 註冊會停用，**不會假裝寄信成功**。
-4. **避免洩漏**：以上敏感值請在 Cloudflare 後台設定，或從專案目錄使用以下互動指令，**不要提交密鑰到 GitHub**：
+4. **密碼 Pepper（必要）**：Workers 正式環境拒絕單次 PBKDF2 超過 100,000 次，原本 230,000 次會令註冊回傳 503。新版本先使用高熵伺服器密鑰 `AUTH_PASSWORD_PEPPER` 進行 HMAC-SHA256 預雜湊，再執行加 Salt 的 45,000 次 PBKDF2-SHA256，以符合 Workers Free 的 10ms CPU 預算；此工作因子低於 OWASP 建議，仰賴強密碼、伺服器 Pepper、限流與後續風險評估，不能視為等同於高成本密碼雜湊。**Pepper 至少 32 字元，建議 32 個隨機位元組以上，長期保存且切勿公開；遺失或任意輪替會使目前的密碼無法驗證**。
+5. **避免洩漏**：以上敏感值請在 Cloudflare 後台設定，或從專案目錄使用以下互動指令，**不要提交密鑰到 GitHub**：
 
 ```bash
 npx wrangler secret put GOOGLE_CLIENT_ID
 npx wrangler secret put RESEND_API_KEY
 npx wrangler secret put EMAIL_FROM
+npx wrangler secret put AUTH_PASSWORD_PEPPER
 ```
 
-可另外設定 `APP_ORIGIN=https://disui.noppl.cc`；未設定時 Worker 會使用目前正式網址。請先完成驗證網域再啟用 Email 註冊；可由 `GET /api/auth/config` 確認 `googleClientId` / `emailEnabled`。其中 Client ID 是可公開的識別碼，API 不會回傳 Email 寄件 API Key。
+可另外設定 `APP_ORIGIN=https://disui.noppl.cc`；未設定時 Worker 會使用目前正式網址。請先完成 Resend 寄件網域驗證再啟用 Email 註冊；可由 `GET /api/auth/config` 確認 `googleClientId`、`emailEnabled`、`authSchemaReady`、`passwordPepperConfigured`。API 只回傳**格式正確**的 Google Client ID；誤填 Client Secret 時會隱藏憑證並回傳 `googleConfigInvalid: true`。不會回傳 Resend API Key 或 Password Pepper。
 
-> **重要**：GitHub 推送／Cloudflare Worker 部署 **不會自動執行 D1 Migration**，未套用 0002 前登入 API 無法使用。首次部署或修改 Secrets 後，請檢查 Worker 建置是否重新部署，以及 Resend Domain 是否已通過驗證。
+> **重要**：GitHub 推送／Cloudflare Worker 部署 **不會自動執行 D1 Migration**。本版需要完成 **0003 Migration 與 AUTH_PASSWORD_PEPPER** 才能使用 Email／密碼註冊及登入。首次部署或修改 Secrets 後，請檢查 Worker 建置是否重新部署，以及 Resend Domain 是否已通過驗證。
 
 ### 註冊失敗排查
 
 如果設定頁的 Email 註冊或 Google 登入失敗，先查看 `https://disui.noppl.cc/api/auth/config`：
 
-- `authSchemaReady: false`：表示 D1 帳號資料表尚未齊全，需執行 `npx wrangler d1 migrations apply disui-db --remote`（包含 `0002_auth_accounts.sql`）。設定頁會停止註冊並提供這項提示。
-- `emailEnabled: false`：表示 Worker 未同時設定 `RESEND_API_KEY` 與 `EMAIL_FROM`；這只檢查是否設定，不代表 Resend 寄信一定成功。
-- `googleClientId: null`：表示尚未設定 Google Client ID。
+- `authSchemaReady: false`：表示 D1 帳號資料表尚未齊全，需執行 `npx wrangler d1 migrations apply disui-db --remote`（包含 `0003_password_credentials.sql`）。設定頁會停止註冊並提供這項提示。
+- `emailEnabled: false`：表示 Worker 尚未同時設定 `RESEND_API_KEY`、`EMAIL_FROM` 與 `AUTH_PASSWORD_PEPPER`；
+  `passwordPepperConfigured: false` 可專門辨識缺少密碼密鑰。即使 Email 設定齊全，也不代表 Resend 寄信一定成功。
+- `googleClientId: null`：表示未設定有效的 Google Client ID；若 `googleConfigInvalid: true`，檢查是否錯把 Google Client Secret 設成 Client ID。
 
 如果 `authSchemaReady: true` 且 `emailEnabled: true` 仍無法註冊，請確認 Resend 已驗證寄件網域與 `EMAIL_FROM` 一致，並查看 Cloudflare Worker Logs。若寄信失敗，API 會回傳 `EMAIL_DELIVERY_FAILED`（HTTP 502）；已新增未驗證帳號重新註冊時的重寄機制（寄送間隔至少 60 秒）。**錯誤訊息與 Console/Logs 不應包含 Email 驗證 Token、密碼或 API Key。**
 
@@ -173,7 +176,7 @@ npx wrangler secret put EMAIL_FROM
 | POST | `/api/me/pet/feed` | 帳號驗證後伺服器餵食（12 小時冷卻） |
 | POST | `/api/me/pet/rename` | 修改帳號寵物名稱 |
 
-所有修改用 API 限制同來源 POST，登入使用 `HttpOnly; Secure; SameSite=Lax` Cookie（只提供給 `/api` 路徑），Session Token 在 D1 僅保存 SHA-256 Hash。密碼使用每帳號獨立 Salt 的 PBKDF2-SHA256；Google ID Token 經 Google JWK RSA 簽章驗證並檢查 `iss`、`aud`、`exp` 等聲明。不會僅因 Email 相同就自動合併 Google 與密碼帳號。
+所有修改用 API 限制同來源 POST，登入使用 `HttpOnly; Secure; SameSite=Lax` Cookie（只提供給 `/api` 路徑），Session Token 在 D1 僅保存 SHA-256 Hash。密碼使用每帳號獨立 Salt 與只保存在 Worker 的 Pepper 加強 PBKDF2-SHA256（密碼憑證位於 `auth_password_credentials`，而非原始 users 密碼欄位）；Google ID Token 經 Google JWK RSA 簽章驗證並檢查 `iss`、`aud`、`exp` 等聲明。不會僅因 Email 相同就自動合併 Google 與密碼帳號。
 
 **目前限制**：只有最基本的 D1 請求次數限制；正式公開後仍建議加 Cloudflare WAF / Rate Limiting，並實作密碼變更、停用裝置 Session、完整刪除帳號、額外安全事件通知及跨裝置同步衝突管理。若 Email 寄信服務不可用，註冊與重設流程可能失敗；請勿把它當作已完成 Email 寄送的證據。
 

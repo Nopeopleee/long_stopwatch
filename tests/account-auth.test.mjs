@@ -10,7 +10,7 @@ globalThis.crypto ??= webcrypto;
 function database() {
   const sqlite = new DatabaseSync(":memory:");
   sqlite.exec("PRAGMA foreign_keys = ON");
-  for (const name of ["0001_create_pets.sql", "0002_auth_accounts.sql"]) {
+  for (const name of ["0001_create_pets.sql", "0002_auth_accounts.sql", "0003_password_credentials.sql"]) {
     sqlite.exec(readFileSync(new URL("../migrations/" + name, import.meta.url), "utf8"));
   }
   const db = {
@@ -63,7 +63,8 @@ function mockMailAndGoogle(jwks = { keys: [] }) {
 }
 
 function env(db) {
-  return { DB: db, GOOGLE_CLIENT_ID: "testing-client-id",
+  return { DB: db, GOOGLE_CLIENT_ID: "123456789-testing-id.apps.googleusercontent.com",
+    AUTH_PASSWORD_PEPPER: "test-only-long-random-pepper-do-not-use-in-production-12345678",
     RESEND_API_KEY: "test-key", EMAIL_FROM: "滴歲 <hello@example.org>",
     APP_ORIGIN: "https://disui.noppl.cc",
     ASSETS: { fetch: () => new Response("static") } };
@@ -277,5 +278,67 @@ test("Retry signup can resend verification after initial delivery error", async 
   } finally {
     globalThis.fetch = oldFetch;
     sqlite.close();
+  }
+});
+
+test("Misconfigured Google client secret is never exposed by the public config endpoint", async () => {
+  const { db, sqlite } = database();
+  try {
+    const e = env(db);
+    e.GOOGLE_CLIENT_ID = "GOCSPX-do-not-publish-secret";
+    const result = await api(e, "/api/auth/config");
+    assert.equal(result.status, 200);
+    assert.equal(result.data.googleClientId, null);
+    assert.equal(result.data.googleConfigInvalid, true);
+    assert.ok(!JSON.stringify(result.data).includes("GOCSPX-"));
+    assert.equal(result.data.authSchemaReady, true);
+    assert.equal(result.data.passwordPepperConfigured, true);
+  } finally {
+    sqlite.close();
+  }
+});
+
+test("Email password signup refuses a missing server-side pepper", async () => {
+  const { db, sqlite } = database();
+  try {
+    const e = env(db);
+    delete e.AUTH_PASSWORD_PEPPER;
+    const config = await api(e, "/api/auth/config");
+    assert.equal(config.data.emailEnabled, false);
+    assert.equal(config.data.passwordPepperConfigured, false);
+    const signup = await api(e, "/api/auth/register", {
+      method: "POST", body: { email: "no-pepper@example.org", password: "correct-password-42" }
+    });
+    assert.equal(signup.status, 503);
+    assert.equal(sqlite.prepare("SELECT count(*) AS n FROM users").get().n, 0);
+  } finally {
+    sqlite.close();
+  }
+});
+
+test("Email password hashing uses the new table and respects the Workers PBKDF2 hard cap", async () => {
+  inbox.length = 0;
+  const restoreFetch = mockMailAndGoogle();
+  const { db, sqlite } = database();
+  try {
+    const e = env(db);
+    await signup(e, "pbkdf2@example.org", "correct-password-42");
+    const creds = sqlite.prepare(
+      "SELECT password_iterations, password_hash, password_salt FROM auth_password_credentials"
+    ).get();
+    assert.ok(creds.password_iterations <= 100000);
+    assert.ok(creds.password_iterations >= 10000);
+    assert.equal(creds.password_hash.length, 64);
+    assert.equal(creds.password_salt.length, 32);
+    assert.equal(sqlite.prepare(
+      "SELECT password_hash FROM users WHERE email=?"
+    ).get("pbkdf2@example.org").password_hash, null);
+    const login = await api(e, "/api/auth/login", {
+      method: "POST", body: { email: "pbkdf2@example.org", password: "correct-password-42" }
+    });
+    assert.equal(login.status, 200);
+  } finally {
+    sqlite.close();
+    restoreFetch();
   }
 });

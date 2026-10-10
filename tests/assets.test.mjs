@@ -9,7 +9,7 @@ test("Cloudflare assets include all scripts, styles, and PWA cached files", () =
   const html = [read("index.html"), read("settings.html")].join("\n");
   for (const asset of ["account.js", "account-ui.js", "account.css", "cloud.js", "app.js", "settings.js"]) {
     assert.ok(allowed.includes(asset), asset + " missing from Cloudflare static asset allowlist");
-    const version = asset === "account-ui.js" ? "auth-v2" : "auth-v1";
+    const version = asset === "account-ui.js" ? "auth-v3" : "auth-v1";
     assert.ok(sw.includes("./" + asset + "?v=" + version), asset + " missing from PWA cache with updated version");
     assert.ok(html.includes("./" + asset + "?v=" + version), asset + " missing from HTML scripts/styles");
   }
@@ -29,4 +29,13 @@ test("D1 migrations remain append-only", () => {
   for (const name of ["users", "auth_identities", "auth_sessions", "auth_tokens", "pet_owners", "auth_rate_limits"]) {
     assert.ok(auth.includes("CREATE TABLE IF NOT EXISTS " + name), "Missing " + name);
   }
+  assert.ok(read("migrations/0003_password_credentials.sql").includes("CREATE TABLE IF NOT EXISTS auth_password_credentials"));
+});
+
+test("Workers production PBKDF2 single-call cap is enforced in source", () => {
+  const code = read("src/auth.js");
+  const iterations = Number(code.match(/const ITERATIONS = (\d+)/)?.[1]);
+  assert.ok(iterations > 0 && iterations <= 100000, "PBKDF2 cost cannot exceed the Workers production cap");
+  assert.ok(code.includes('iterations > 100000'), "Database-provided PBKDF2 cost must be bounded");
+  assert.ok(code.includes("AUTH_PASSWORD_PEPPER"), "Password hashing should require a server-side secret");
 });

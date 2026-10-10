@@ -230,10 +230,22 @@
         $("accountResendBtn").disabled = true;
         $("accountForgotBtn").disabled = true;
       }
-      providerHint.textContent = config.googleClientId
-        ? "Google Client ID 已設定。"
-        : "Google 登入待設定 Client ID。" +
-          (config.emailEnabled ? " Resend 金鑰已設定，寄件網域仍須完成驗證。" : " Email 寄信服務尚未設定。");
+      const hints = [];
+      if (config.googleConfigInvalid) {
+        hints.push("Google 憑證格式錯誤：請使用結尾為 .apps.googleusercontent.com 的 Client ID，不要填入 Client Secret。");
+      } else if (config.googleClientId) {
+        hints.push("Google Client ID 已設定。");
+      } else {
+        hints.push("Google 登入待設定 Client ID。");
+      }
+      if (!config.passwordPepperConfigured) {
+        hints.push("Email 密碼登入需要在 Worker 設定 AUTH_PASSWORD_PEPPER。");
+      } else if (config.emailEnabled) {
+        hints.push("Email 服務已設定，寄件網域仍須完成驗證。");
+      } else {
+        hints.push("Email 寄信服務尚未設定。");
+      }
+      providerHint.textContent = hints.join(" ");
       await refresh();
       await loadGoogle();
     } catch (error) {

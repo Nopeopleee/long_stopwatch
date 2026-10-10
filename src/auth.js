@@ -1,6 +1,8 @@
 // Cloudflare Workers account authentication. Uses WebCrypto, D1 and Resend; no npm runtime dependencies.
 const textEncoder = new TextEncoder();
-const ITERATIONS = 230000;
+// Production Workers reject PBKDF2 >100,000 iterations per deriveBits call.
+// 45,000 is selected for Workers Free's 10ms CPU budget; require a secret pepper.
+const ITERATIONS = 45000;
 const SESSION_MS = 14 * 24 * 60 * 60 * 1000;
 const EMAIL_TOKEN_MS = 30 * 60 * 1000;
 const RESET_TOKEN_MS = 20 * 60 * 1000;
@@ -34,24 +36,45 @@ function normalizeEmail(value) {
 function passwordValid(value) {
   return typeof value === "string" && value.length >= 10 && value.length <= 128;
 }
-async function passwordHash(password, salt, iterations = ITERATIONS) {
-  const key = await crypto.subtle.importKey("raw", textEncoder.encode(password), "PBKDF2", false, ["deriveBits"]);
+function passwordPepperReady(env) {
+  return typeof env.AUTH_PASSWORD_PEPPER === "string" && env.AUTH_PASSWORD_PEPPER.length >= 32;
+}
+function validGoogleClientId(value) {
+  // Client secrets typically start with GOCSPX- and must never be sent to browsers.
+  return typeof value === "string" &&
+    /^[0-9]+-[a-z0-9-]+\.apps\.googleusercontent\.com$/.test(value);
+}
+async function passwordHash(password, salt, iterations, env) {
+  if (!passwordPepperReady(env)) {
+    throw Object.assign(new Error("Password pepper not configured"), { code: "PASSWORD_PEPPER_MISSING" });
+  }
+  if (!Number.isSafeInteger(iterations) || iterations < 10000 || iterations > 100000) {
+    throw Object.assign(new Error("Unsupported PBKDF2 cost"), { code: "INVALID_PASSWORD_KDF" });
+  }
+  // The HMAC key is a high-entropy Worker secret, never stored in D1. Even with
+  // a DB dump, the attacker cannot test candidate passwords offline without it.
+  const hmacKey = await crypto.subtle.importKey(
+    "raw", textEncoder.encode(env.AUTH_PASSWORD_PEPPER),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const prehash = await crypto.subtle.sign("HMAC", hmacKey, textEncoder.encode(password));
+  const key = await crypto.subtle.importKey("raw", prehash, "PBKDF2", false, ["deriveBits"]);
   const bits = await crypto.subtle.deriveBits({
     name: "PBKDF2", salt: Uint8Array.from(salt.match(/../g).map(x => parseInt(x, 16))),
     iterations, hash: "SHA-256"
   }, key, 256);
   return [...new Uint8Array(bits)].map(x => x.toString(16).padStart(2, "0")).join("");
 }
-async function hashNewPassword(password) {
+async function hashNewPassword(password, env) {
   const salt = token().slice(0, 32);
-  return { salt, iterations: ITERATIONS, hash: await passwordHash(password, salt) };
+  return { salt, iterations: ITERATIONS, hash: await passwordHash(password, salt, ITERATIONS, env) };
 }
-async function passwordMatches(password, user) {
-  if (!user?.password_hash || !passwordValid(password)) return false;
-  const actual = await passwordHash(password, user.password_salt, user.password_iterations);
+async function passwordMatches(password, user, env) {
+  if (!user?.credential_hash || !passwordValid(password)) return false;
+  const actual = await passwordHash(password, user.credential_salt, user.credential_iterations, env);
   let diff = 0;
-  for (let i = 0; i < actual.length; i++) diff |= actual.charCodeAt(i) ^ user.password_hash.charCodeAt(i);
-  return diff === 0 && actual.length === user.password_hash.length;
+  for (let i = 0; i < actual.length; i++) diff |= actual.charCodeAt(i) ^ user.credential_hash.charCodeAt(i);
+  return diff === 0 && actual.length === user.credential_hash.length;
 }
 
 function jsonBody(request, maxLength = 2048) {
@@ -111,7 +134,8 @@ export async function currentUser(request, db) {
   if (!/^[a-f0-9]{64}$/.test(value)) return null;
   const hash = await digest(value);
   return db.prepare(
-    `SELECT users.id, users.email, users.email_verified_at, users.password_hash,
+    `SELECT users.id, users.email, users.email_verified_at,
+            EXISTS(SELECT 1 FROM auth_password_credentials WHERE user_id = users.id) AS has_password,
             EXISTS(SELECT 1 FROM auth_identities WHERE user_id = users.id AND provider = 'google') AS google_linked
      FROM auth_sessions JOIN users ON users.id = auth_sessions.user_id
      WHERE auth_sessions.token_hash = ? AND auth_sessions.expires_at > ? LIMIT 1`
@@ -120,7 +144,7 @@ export async function currentUser(request, db) {
 function publicUser(user) {
   return {
     id: user.id, email: user.email, emailVerified: !!user.email_verified_at,
-    hasPassword: !!user.password_hash, googleLinked: !!user.google_linked
+    hasPassword: !!user.has_password, googleLinked: !!user.google_linked
   };
 }
 async function issueSession(db, user) {
@@ -182,7 +206,7 @@ function base64UrlDecode(value) {
   return Uint8Array.from(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "=")), c => c.charCodeAt(0));
 }
 async function verifyGoogle(raw, clientId) {
-  if (!clientId || typeof raw !== "string" || raw.length > 10000) throw new Error("Google authentication unavailable");
+  if (!validGoogleClientId(clientId) || typeof raw !== "string" || raw.length > 10000) throw new Error("Google authentication unavailable");
   const parts = raw.split(".");
   if (parts.length !== 3) throw new Error("Invalid Google token");
   const header = JSON.parse(new TextDecoder().decode(base64UrlDecode(parts[0])));
@@ -219,19 +243,21 @@ async function executeAuth(request, env, path) {
   if (path === "/api/auth/config" && request.method === "GET") {
     // A deployed Worker does not mean the D1 account migration has been applied.
     // Check all account tables so the UI can explain setup issues before signup.
-    const requiredTables = ["users", "auth_identities", "auth_sessions", "auth_tokens", "pet_owners", "auth_rate_limits"];
+    const requiredTables = ["users", "auth_identities", "auth_sessions", "auth_tokens", "pet_owners", "auth_rate_limits", "auth_password_credentials"];
     let authSchemaReady = false;
     try {
       const rows = await db.prepare(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('users','auth_identities','auth_sessions','auth_tokens','pet_owners','auth_rate_limits')"
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('users','auth_identities','auth_sessions','auth_tokens','pet_owners','auth_rate_limits','auth_password_credentials')"
       ).all();
       authSchemaReady = requiredTables.every(table => rows.results.some(row => row.name === table));
     } catch (error) {
       console.error("Account schema readiness check failed", error);
     }
     return authJson({
-      googleClientId: env.GOOGLE_CLIENT_ID || null,
-      emailEnabled: !!(env.RESEND_API_KEY && env.EMAIL_FROM),
+      googleClientId: validGoogleClientId(env.GOOGLE_CLIENT_ID) ? env.GOOGLE_CLIENT_ID : null,
+      googleConfigInvalid: !!env.GOOGLE_CLIENT_ID && !validGoogleClientId(env.GOOGLE_CLIENT_ID),
+      emailEnabled: !!(env.RESEND_API_KEY && env.EMAIL_FROM && passwordPepperReady(env)),
+      passwordPepperConfigured: passwordPepperReady(env),
       authSchemaReady
     });
   }
@@ -245,7 +271,8 @@ async function executeAuth(request, env, path) {
   const body = await jsonBody(request);
   const now = Date.now();
   if (path === "/api/auth/register") {
-    if (!env.RESEND_API_KEY || !env.EMAIL_FROM) return authJson({ error: "Email registration not configured" }, 503);
+    if (!env.RESEND_API_KEY || !env.EMAIL_FROM) return authJson({ error: "尚未設定 Email 寄信服務" }, 503);
+    if (!passwordPepperReady(env)) return authJson({ error: "尚未設定 AUTH_PASSWORD_PEPPER" }, 503);
     const email = normalizeEmail(body.email);
     if (!email || !passwordValid(body.password)) return authJson({ error: "Email 或密碼格式不正確（密碼需 10–128 字元）" }, 400);
     if (!await limit(db, request, "register", 5, 60 * 60 * 1000)) return authJson({ error: "請稍後再試" }, 429);
@@ -258,12 +285,18 @@ async function executeAuth(request, env, path) {
       if (!exists.email_verified_at) await sendToken(db, env, exists, "verify");
       return authJson({ pendingVerification: true }, 202);
     }
-    const pass = await hashNewPassword(body.password);
+    const pass = await hashNewPassword(body.password, env);
     const user = { id: crypto.randomUUID(), email };
-    await db.prepare(
-      `INSERT INTO users (id, email, password_hash, password_salt, password_iterations, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).bind(user.id, email, pass.hash, pass.salt, pass.iterations, now, now).run();
+    // Insert account and its password atomically; the legacy users.password_*
+    // CHECK requires >=200k rounds and is intentionally not used.
+    await db.batch([
+      db.prepare(
+        "INSERT INTO users (id, email, created_at, updated_at) VALUES (?, ?, ?, ?)"
+      ).bind(user.id, email, now, now),
+      db.prepare(
+        "INSERT INTO auth_password_credentials (user_id, password_hash, password_salt, password_iterations, updated_at) VALUES (?, ?, ?, ?, ?)"
+      ).bind(user.id, pass.hash, pass.salt, pass.iterations, now)
+    ]);
     await sendToken(db, env, user, "verify");
     return authJson({ pendingVerification: true }, 202);
   }
@@ -280,7 +313,7 @@ async function executeAuth(request, env, path) {
       "UPDATE users SET email_verified_at=COALESCE(email_verified_at, ?), updated_at=? WHERE id=?"
     ).bind(now, now, record.user_id).run();
     const user = await db.prepare(
-      "SELECT id, email, email_verified_at, password_hash, 0 AS google_linked FROM users WHERE id = ?"
+      "SELECT id, email, email_verified_at, 1 AS has_password, 0 AS google_linked FROM users WHERE id = ?"
     ).bind(record.user_id).first();
     return issueSession(db, user);
   }
@@ -299,12 +332,17 @@ async function executeAuth(request, env, path) {
         !await limit(db, request, "login-email", 8, 15 * 60 * 1000, email)) {
       return authJson({ error: "登入嘗試太頻繁，請稍後再試" }, 429);
     }
+    if (!passwordPepperReady(env)) return authJson({ error: "尚未設定 AUTH_PASSWORD_PEPPER" }, 503);
     const user = await db.prepare(
-      `SELECT id, email, email_verified_at, password_hash, password_salt, password_iterations,
+      `SELECT users.id, users.email, users.email_verified_at,
+              creds.password_hash AS credential_hash, creds.password_salt AS credential_salt,
+              creds.password_iterations AS credential_iterations,
+              (creds.user_id IS NOT NULL) AS has_password,
               EXISTS(SELECT 1 FROM auth_identities WHERE user_id=users.id AND provider='google') AS google_linked
-       FROM users WHERE email = ? LIMIT 1`
+       FROM users LEFT JOIN auth_password_credentials creds ON creds.user_id=users.id
+       WHERE users.email = ? LIMIT 1`
     ).bind(email).first();
-    if (!await passwordMatches(body.password, user)) return authJson({ error: "Email 或密碼錯誤" }, 401);
+    if (!await passwordMatches(body.password, user, env)) return authJson({ error: "Email 或密碼錯誤" }, 401);
     if (!user.email_verified_at) return authJson({ error: "請先完成 Email 驗證" }, 403);
     return issueSession(db, user);
   }
@@ -328,7 +366,8 @@ async function executeAuth(request, env, path) {
     }
     if (existing) {
       const user = await db.prepare(
-        `SELECT id, email, email_verified_at, password_hash,
+        `SELECT id, email, email_verified_at,
+                EXISTS(SELECT 1 FROM auth_password_credentials WHERE user_id=users.id) AS has_password,
                 1 AS google_linked FROM users WHERE id = ?`
       ).bind(existing.user_id).first();
       return issueSession(db, user);
@@ -343,7 +382,7 @@ async function executeAuth(request, env, path) {
       db.prepare("INSERT INTO auth_identities (provider,provider_user_id,user_id,created_at) VALUES ('google',?,?,?)")
         .bind(identity.sub, id, now)
     ]);
-    return issueSession(db, { id, email: identity.email, email_verified_at: now, password_hash: null, google_linked: 1 });
+    return issueSession(db, { id, email: identity.email, email_verified_at: now, has_password: 0, google_linked: 1 });
   }
   if (path === "/api/auth/forgot-password") {
     const email = normalizeEmail(body.email);
@@ -359,16 +398,22 @@ async function executeAuth(request, env, path) {
     if (!passwordValid(body.password) || typeof body.token !== "string" ||
         !/^[a-f0-9]{64}$/i.test(body.token)) return authJson({ error: "重設資料格式不正確" }, 400);
     if (!await limit(db, request, "reset", 10, 15 * 60 * 1000)) return authJson({ error: "請稍後再試" }, 429);
+    if (!passwordPepperReady(env)) return authJson({ error: "尚未設定 AUTH_PASSWORD_PEPPER" }, 503);
     const hash = await digest(body.token.toLowerCase());
-    const pass = await hashNewPassword(body.password);
+    const pass = await hashNewPassword(body.password, env);
     // Single-use reset links must be consumed atomically even under concurrency.
     const record = await db.prepare(
       "DELETE FROM auth_tokens WHERE kind='reset' AND token_hash=? AND expires_at>? RETURNING user_id"
     ).bind(hash, now).first();
     if (!record) return authJson({ error: "重設連結已過期或已使用" }, 400);
     await db.batch([
-      db.prepare("UPDATE users SET password_hash=?,password_salt=?,password_iterations=?,updated_at=? WHERE id=?")
-        .bind(pass.hash, pass.salt, pass.iterations, now, record.user_id),
+      db.prepare(
+        `INSERT INTO auth_password_credentials (user_id,password_hash,password_salt,password_iterations,updated_at)
+         VALUES (?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET
+         password_hash=excluded.password_hash, password_salt=excluded.password_salt,
+         password_iterations=excluded.password_iterations, updated_at=excluded.updated_at`
+      ).bind(record.user_id, pass.hash, pass.salt, pass.iterations, now),
+      db.prepare("UPDATE users SET updated_at=? WHERE id=?").bind(now, record.user_id),
       db.prepare("DELETE FROM auth_sessions WHERE user_id=?").bind(record.user_id)
     ]);
     return authJson({ ok: true }, 200, { "Set-Cookie": setCookie("", 0) });
@@ -389,7 +434,13 @@ export async function handleAuth(request, env, path) {
     if (error.status) return authJson({ error: error.message }, error.status);
     console.error("Authentication API failed", error);
     if (/no such table/i.test(String(error.message))) {
-      return authJson({ error: "帳號資料表尚未初始化，請先執行 D1 Migration 0002。", code: "AUTH_SCHEMA_MISSING" }, 503);
+      return authJson({ error: "帳號資料表尚未初始化，請執行尚未套用的 D1 Migration（包含 0003）。", code: "AUTH_SCHEMA_MISSING" }, 503);
+    }
+    if (error.code === "PASSWORD_PEPPER_MISSING") {
+      return authJson({ error: "尚未設定 AUTH_PASSWORD_PEPPER，無法安全處理密碼。", code: "AUTH_PEPPER_MISSING" }, 503);
+    }
+    if (error.code === "INVALID_PASSWORD_KDF") {
+      return authJson({ error: "密碼儲存格式不支援，請使用密碼重設功能。", code: "INVALID_PASSWORD_KDF" }, 503);
     }
     if (error.code === "EMAIL_DELIVERY_FAILED" || error.code === "EMAIL_NOT_CONFIGURED") {
       return authJson({ error: "驗證信未能寄出，請檢查 Resend 寄件網域與 API Key；完成設定後可重寄驗證信。", code: "EMAIL_DELIVERY_FAILED" }, 502);
