@@ -32,7 +32,7 @@ export function allowedPushEndpoint(endpoint) {
   let parsed;
   try { parsed = new URL(endpoint); } catch { return false; }
   if (parsed.protocol !== "https:" || parsed.username || parsed.password ||
-      parsed.port || parsed.hash || parsed.search) return false;
+      parsed.port || parsed.hash) return false;
   const host = parsed.hostname.toLowerCase();
   const trusted =
     host === "fcm.googleapis.com" ||
@@ -43,7 +43,9 @@ export function allowedPushEndpoint(endpoint) {
     host.endsWith(".push.apple.com") ||
     host.endsWith(".notify.windows.com") ||
     host.endsWith(".wns.windows.com");
-  return trusted && parsed.pathname.length > 1;
+  // A few push services (notably Windows) carry an opaque token in the query.
+  // Only trusted HTTPS push hosts are allowed to receive these URLs.
+  return trusted && (parsed.pathname.length > 1 || parsed.search.length > 0);
 }
 
 export function pushConfigured(env) {
