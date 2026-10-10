@@ -122,7 +122,13 @@ async function refreshSafetyStatus(){
   else setSafetyBadge(els.backupHealthBadge,"建議備份","bad");
 }
 function snapshotReasonLabel(reason){
-  return({auto:"每日自動",manual:"手動建立",migration:"首次建立",["before-import"]:"匯入前",["before-reset"]:"重置前",["before-restore"]:"還原前",["before-repair"]:"修復前",["conflict-loser"]:"衝突保留"})[reason]||reason||"快照";
+  return({
+    auto:"每日自動保存",manual:"手動保存",migration:"首次保存",
+    ["before-import"]:"還原檔案前",["before-reset"]:"重新開始前",
+    ["before-restore"]:"還原之前",["before-repair"]:"修復之前",
+    ["before-cloud-bind"]:"啟用舊版備份前",["before-cloud-restore"]:"從舊版備份還原前",
+    ["before-account-restore"]:"切換帳號小滴前",["conflict-loser"]:"備用紀錄"
+  })[reason]||"自動保存";
 }
 async function openSnapshotDialog(){
   if(!window.DisuiStorage||!els.snapshotDialog||!els.snapshotList)return;
