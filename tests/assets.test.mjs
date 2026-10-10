@@ -12,9 +12,9 @@ test("Cloudflare assets include all scripts, styles, and PWA cached files", () =
     "account-ui.js": "ui-v2",
     "account.css": "auth-v1",
     "cloud.js": "auth-v1",
-    "app.js": "ui-v2",
+    "app.js": "ui-v3",
     "settings.js": "ui-v2",
-    "styles.css": "ui-v2"
+    "styles.css": "ui-v3"
   };
   for (const [asset, version] of Object.entries(versions)) {
     assert.ok(allowed.includes(asset), asset + " missing from Cloudflare static asset allowlist");
