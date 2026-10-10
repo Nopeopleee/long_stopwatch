@@ -52,7 +52,7 @@ export function pushConfigured(env) {
     const priv = decodeUrlBase64(env.PUSH_VAPID_PRIVATE_KEY);
     return pub.length === 65 && pub[0] === 4 && priv.length === 32 &&
       typeof env.PUSH_VAPID_SUBJECT === "string" &&
-      /^(mailto:[^\\s@]+@[^\\s@]+\\.[^\\s@]+|https:\/\/[^\\s]+)$/.test(env.PUSH_VAPID_SUBJECT);
+      /^(mailto:[^\s@]+@[^\s@]+\.[^\s@]+|https:\/\/[^\s]+)$/.test(env.PUSH_VAPID_SUBJECT);
   } catch { return false; }
 }
 
