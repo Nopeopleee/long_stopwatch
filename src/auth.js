@@ -134,7 +134,9 @@ async function issueSession(db, user) {
 }
 
 async function sendEmail(env, to, kind, value) {
-  if (!env.RESEND_API_KEY || !env.EMAIL_FROM) throw new Error("Email provider not configured");
+  if (!env.RESEND_API_KEY || !env.EMAIL_FROM) {
+    throw Object.assign(new Error("Email provider not configured"), { code: "EMAIL_NOT_CONFIGURED" });
+  }
   const url = new URL("/settings", env.APP_ORIGIN || "https://disui.noppl.cc");
   url.searchParams.set(kind === "verify" ? "verify" : "reset", value);
   const isVerify = kind === "verify";
@@ -151,8 +153,8 @@ async function sendEmail(env, to, kind, value) {
     body: JSON.stringify({ from: env.EMAIL_FROM, to: [to], subject, text: body })
   });
   if (!response.ok) {
-    console.error("Email delivery failed", response.status);
-    throw new Error("Email delivery failed");
+    console.error("Resend email delivery failed", response.status);
+    throw Object.assign(new Error("Email delivery failed"), { code: "EMAIL_DELIVERY_FAILED" });
   }
 }
 
@@ -215,9 +217,22 @@ async function verifyGoogle(raw, clientId) {
 async function executeAuth(request, env, path) {
   const db = env.DB;
   if (path === "/api/auth/config" && request.method === "GET") {
+    // A deployed Worker does not mean the D1 account migration has been applied.
+    // Check all account tables so the UI can explain setup issues before signup.
+    const requiredTables = ["users", "auth_identities", "auth_sessions", "auth_tokens", "pet_owners", "auth_rate_limits"];
+    let authSchemaReady = false;
+    try {
+      const rows = await db.prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('users','auth_identities','auth_sessions','auth_tokens','pet_owners','auth_rate_limits')"
+      ).all();
+      authSchemaReady = requiredTables.every(table => rows.results.some(row => row.name === table));
+    } catch (error) {
+      console.error("Account schema readiness check failed", error);
+    }
     return authJson({
       googleClientId: env.GOOGLE_CLIENT_ID || null,
-      emailEnabled: !!(env.RESEND_API_KEY && env.EMAIL_FROM)
+      emailEnabled: !!(env.RESEND_API_KEY && env.EMAIL_FROM),
+      authSchemaReady
     });
   }
   if (path === "/api/auth/me" && request.method === "GET") {
@@ -234,8 +249,15 @@ async function executeAuth(request, env, path) {
     const email = normalizeEmail(body.email);
     if (!email || !passwordValid(body.password)) return authJson({ error: "Email 或密碼格式不正確（密碼需 10–128 字元）" }, 400);
     if (!await limit(db, request, "register", 5, 60 * 60 * 1000)) return authJson({ error: "請稍後再試" }, 429);
-    const exists = await db.prepare("SELECT id FROM users WHERE email = ? LIMIT 1").bind(email).first();
-    if (exists) return authJson({ pendingVerification: true }, 202);
+    const exists = await db.prepare(
+      "SELECT id, email, email_verified_at FROM users WHERE email = ? LIMIT 1"
+    ).bind(email).first();
+    // A previous signup may have inserted the account but failed to send email.
+    // Allow retry for unverified accounts without revealing whether an email exists.
+    if (exists) {
+      if (!exists.email_verified_at) await sendToken(db, env, exists, "verify");
+      return authJson({ pendingVerification: true }, 202);
+    }
     const pass = await hashNewPassword(body.password);
     const user = { id: crypto.randomUUID(), email };
     await db.prepare(
@@ -366,6 +388,12 @@ export async function handleAuth(request, env, path) {
   catch (error) {
     if (error.status) return authJson({ error: error.message }, error.status);
     console.error("Authentication API failed", error);
-    return authJson({ error: "服務暫時無法使用" }, 503);
+    if (/no such table/i.test(String(error.message))) {
+      return authJson({ error: "帳號資料表尚未初始化，請先執行 D1 Migration 0002。", code: "AUTH_SCHEMA_MISSING" }, 503);
+    }
+    if (error.code === "EMAIL_DELIVERY_FAILED" || error.code === "EMAIL_NOT_CONFIGURED") {
+      return authJson({ error: "驗證信未能寄出，請檢查 Resend 寄件網域與 API Key；完成設定後可重寄驗證信。", code: "EMAIL_DELIVERY_FAILED" }, 502);
+    }
+    return authJson({ error: "服務暫時無法使用，請查看 Cloudflare Worker Logs。", code: "AUTH_SERVICE_ERROR" }, 503);
   }
 }

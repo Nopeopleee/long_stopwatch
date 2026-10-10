@@ -20,10 +20,12 @@ function database() {
         bind(...values) {
           return {
             async first() { return stmt.get(...values) || null; },
+            async all() { return { results: stmt.all(...values) }; },
             async run() { return { meta: { changes: stmt.run(...values).changes } }; }
           };
         },
         async first() { return stmt.get() || null; },
+        async all() { return { results: stmt.all() }; },
         async run() { return { meta: { changes: stmt.run().changes } }; }
       };
     },
@@ -227,4 +229,53 @@ test("Password reset revokes sessions; claim requires existing owner token", asy
     assert.equal(newLogin.status, 200);
     assert.equal((await api(e, "/api/me/pet", { cookie: newLogin.cookie })).data.pet.id, created.data.pet.id);
   } finally { sqlite.close(); restoreFetch(); }
+});
+
+test("Auth config reports whether D1 account migration was applied", async () => {
+  const { db, sqlite } = database();
+  try {
+    const e = env(db);
+    const ready = await api(e, "/api/auth/config");
+    assert.equal(ready.status, 200);
+    assert.equal(ready.data.authSchemaReady, true);
+    assert.equal(ready.data.emailEnabled, true);
+    sqlite.exec("DROP TABLE auth_rate_limits");
+    const missing = await api(e, "/api/auth/config");
+    assert.equal(missing.status, 200);
+    assert.equal(missing.data.authSchemaReady, false);
+  } finally {
+    sqlite.close();
+  }
+});
+
+test("Retry signup can resend verification after initial delivery error", async () => {
+  inbox.length = 0;
+  const { db, sqlite } = database();
+  const e = env(db);
+  let broken = true;
+  const oldFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    if (url !== "https://api.resend.com/emails") throw Error("Unexpected service");
+    if (broken) return new Response(JSON.stringify({ message: "sender not verified" }), { status: 403 });
+    inbox.push(JSON.parse(options.body));
+    return new Response(JSON.stringify({ id: "sent" }), { status: 200 });
+  };
+  try {
+    const body = { email: "retry@example.org", password: "correct-horse-battery-42" };
+    const first = await api(e, "/api/auth/register", { method: "POST", body });
+    assert.equal(first.status, 502);
+    assert.equal(first.data.code, "EMAIL_DELIVERY_FAILED");
+    const row = sqlite.prepare("SELECT id FROM users WHERE email=?").get(body.email);
+    assert.ok(row, "Signup should have persisted pending account");
+    sqlite.prepare("UPDATE auth_tokens SET created_at = ? WHERE user_id=?").run(Date.now() - 61_000, row.id);
+    broken = false;
+    const second = await api(e, "/api/auth/register", { method: "POST", body });
+    assert.equal(second.status, 202);
+    assert.equal(inbox.length, 1);
+    const verified = await api(e, "/api/auth/verify", { method: "POST", body: { token: linkToken("verify") } });
+    assert.equal(verified.status, 200);
+  } finally {
+    globalThis.fetch = oldFetch;
+    sqlite.close();
+  }
 });

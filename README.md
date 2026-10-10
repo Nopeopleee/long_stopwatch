@@ -142,6 +142,16 @@ npx wrangler secret put EMAIL_FROM
 
 > **重要**：GitHub 推送／Cloudflare Worker 部署 **不會自動執行 D1 Migration**，未套用 0002 前登入 API 無法使用。首次部署或修改 Secrets 後，請檢查 Worker 建置是否重新部署，以及 Resend Domain 是否已通過驗證。
 
+### 註冊失敗排查
+
+如果設定頁的 Email 註冊或 Google 登入失敗，先查看 `https://disui.noppl.cc/api/auth/config`：
+
+- `authSchemaReady: false`：表示 D1 帳號資料表尚未齊全，需執行 `npx wrangler d1 migrations apply disui-db --remote`（包含 `0002_auth_accounts.sql`）。設定頁會停止註冊並提供這項提示。
+- `emailEnabled: false`：表示 Worker 未同時設定 `RESEND_API_KEY` 與 `EMAIL_FROM`；這只檢查是否設定，不代表 Resend 寄信一定成功。
+- `googleClientId: null`：表示尚未設定 Google Client ID。
+
+如果 `authSchemaReady: true` 且 `emailEnabled: true` 仍無法註冊，請確認 Resend 已驗證寄件網域與 `EMAIL_FROM` 一致，並查看 Cloudflare Worker Logs。若寄信失敗，API 會回傳 `EMAIL_DELIVERY_FAILED`（HTTP 502）；已新增未驗證帳號重新註冊時的重寄機制（寄送間隔至少 60 秒）。**錯誤訊息與 Console/Logs 不應包含 Email 驗證 Token、密碼或 API Key。**
+
 ### 帳號 API
 
 | 方法 | 端點 | 功能 |
