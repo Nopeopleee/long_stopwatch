@@ -79,6 +79,7 @@
     pushStatus: endpoint => request("/api/push/status", { endpoint }),
     pushSubscribe: subscription => request("/api/push/subscribe", subscription),
     pushUnsubscribe: endpoint => request("/api/push/unsubscribe", { endpoint }),
+    pushTest: endpoint => request("/api/push/test", { endpoint }),
     pet: () => request("/api/me/pet", undefined, "GET"),
     createPet: name => request("/api/me/pet", { name }),
     claim: (id, ownerToken) => request("/api/me/pet/claim", { id, ownerToken }),
