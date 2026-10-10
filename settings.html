@@ -22,7 +22,7 @@
     })();
   </script>
   <link rel="stylesheet" href="./styles.css?v=ui-v3" />
-  <link rel="stylesheet" href="./account.css?v=auth-v1" />
+  <link rel="stylesheet" href="./account.css?v=push-v1" />
   <meta name="referrer" content="no-referrer" />
   <title>設定｜滴歲</title>
 </head>
@@ -83,6 +83,25 @@
         </div>
       </div>
       <p class="settings-footnote">註冊後請到信箱完成驗證。登入不會自動取代這台裝置的小滴。</p>
+    </section>
+
+    <section class="settings-section" aria-labelledby="notificationsTitle">
+      <h2 id="notificationsTitle" class="settings-section-title">通知提醒</h2>
+      <div class="settings-list">
+        <div class="settings-row">
+          <span class="settings-icon settings-icon-accent" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+          </span>
+          <span class="settings-copy">
+            <strong>餵食提醒</strong>
+            <span id="pushStatus" role="status" aria-live="polite">正在確認這台裝置的提醒設定…</span>
+          </span>
+        </div>
+        <div class="push-controls">
+          <button id="pushToggle" type="button" class="btn primary" disabled>開啟餵食提醒</button>
+          <p id="pushHelp" class="settings-footnote">滿 12 小時可以餵食時提醒一次，不會一直打擾你。</p>
+        </div>
+      </div>
     </section>
 
     <section class="settings-section" aria-labelledby="appearanceTitle">
@@ -356,8 +375,9 @@
   <script src="./common.js?v=award-v1"></script>
   <script src="./storage.js?v=storage-v1"></script>
   <script src="./cloud.js?v=auth-v1"></script>
-  <script src="./account.js?v=auth-v1"></script>
+  <script src="./account.js?v=push-v1"></script>
   <script src="./settings.js?v=ui-v2"></script>
-  <script src="./account-ui.js?v=ui-v2"></script>
+  <script src="./account-ui.js?v=push-v1"></script>
+  <script src="./push-ui.js?v=push-v1"></script>
 </body>
 </html>
