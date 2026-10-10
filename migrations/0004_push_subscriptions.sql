@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   last_attempt_feed_at INTEGER,
   last_attempt_at INTEGER,
   last_sent_feed_at INTEGER,
+  last_test_at INTEGER,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
