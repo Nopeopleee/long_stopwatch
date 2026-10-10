@@ -57,6 +57,7 @@
       guest.hidden = !!user;
       signed.hidden = !user;
       setFooter(user);
+      window.dispatchEvent(new CustomEvent("disui:account-changed", { detail: { loggedIn: !!user } }));
       if (!user) {
         setMessage("尚未登入，仍然可以先照顧這台裝置上的小滴。");
         return;
