@@ -62,7 +62,7 @@ function env(db) {
 function userAndPet(sqlite, { userId = "user-one", email = "user@example.org",
                                 fed = Date.now() - 13 * HOUR } = {}) {
   const now = Date.now();
-  const token = "test-session-" + userId;
+  const token = createHash("sha256").update("test-session-" + userId).digest("hex");
   sqlite.prepare("INSERT INTO users (id,email,email_verified_at,created_at,updated_at) VALUES (?,?,?,?,?)")
     .run(userId, email, now, now, now);
   sqlite.prepare("INSERT INTO auth_sessions (token_hash,user_id,created_at,expires_at) VALUES (?,?,?,?)")
