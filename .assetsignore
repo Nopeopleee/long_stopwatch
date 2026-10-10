@@ -16,6 +16,7 @@
 !cloud.js
 !account.js
 !account-ui.js
+!push-ui.js
 !account.css
 !share-card.js
 !settings.js
