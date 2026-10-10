@@ -37,14 +37,14 @@
   async function protectLocal(reason) {
     const old = loadState();
     if (!old.startedAt) return true;
-    if (!confirm(reason + "\n\n會先建立本機復原點，原資料也可先透過設定匯出 JSON。確定繼續？")) return false;
+    if (!confirm(reason + "\n\n系統會先幫你保存目前的紀錄，確定繼續嗎？")) return false;
     if (window.DisuiStorage) await DisuiStorage.createSnapshot(old, "before-account-restore", { force: true });
     return true;
   }
   async function adopt(pet) {
     const old = loadState();
     const remoteBirth = pet.origin === "legacy" ? pet.legacyStartedAt : pet.createdAt;
-    if (old.startedAt && old.startedAt !== remoteBirth && !await protectLocal("用帳號寵物取代目前這台裝置的小滴？")) return false;
+    if (old.startedAt && old.startedAt !== remoteBirth && !await protectLocal("要在這台裝置改成照顧帳號裡的小滴嗎？")) return false;
     client.restore(pet);
     localStorage.removeItem("disui-care-debug-v1");
     location.href = "./";
@@ -61,7 +61,7 @@
         setMessage("尚未登入，仍然可以先照顧這台裝置上的小滴。");
         return;
       }
-      setMessage(`已登入：${user.email}`);
+      setMessage("已登入");
       $("accountUserInfo").textContent = user.googleLinked
         ? `${user.email} · 已連結 Google`
         : `${user.email} · 信箱已驗證`;
