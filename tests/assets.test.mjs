@@ -9,7 +9,7 @@ test("Cloudflare assets include all scripts, styles, and PWA cached files", () =
   const html = [read("index.html"), read("settings.html")].join("\n");
   for (const asset of ["account.js", "account-ui.js", "account.css", "cloud.js", "app.js", "settings.js"]) {
     assert.ok(allowed.includes(asset), asset + " missing from Cloudflare static asset allowlist");
-    const version = asset === "account-ui.js" ? "auth-v2" : "auth-v1";
+    const version = asset === "account-ui.js" ? "auth-v3" : "auth-v1";
     assert.ok(sw.includes("./" + asset + "?v=" + version), asset + " missing from PWA cache with updated version");
     assert.ok(html.includes("./" + asset + "?v=" + version), asset + " missing from HTML scripts/styles");
   }
